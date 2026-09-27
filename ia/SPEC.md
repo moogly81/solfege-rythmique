@@ -91,15 +91,15 @@ Suit `NOTATION.md` § 3.
 
 ### 3.3 LilyPond (`lilypond.py`)
 
-Choix faits par lecture de la documentation LilyPond (2.24) ; **non encore revérifiés par un rendu réel** (LilyPond n'est pas installable dans le sandbox de développement utilisé pour écrire ce module — voir CLAUDE.md). À confirmer via la CI (qui installe LilyPond) et un contrôle visuel avant de fusionner la branche `outil/lilypond`.
+Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages du vrai `cahier.txt`) ; ne pas les changer sans revérifier le rendu.
 
 - **Portée** : `\new Staff` avec `\override Staff.StaffSymbol.line-count = #1` (1 seule ligne) et `\clef "percussion"`, posés une fois en tête du bloc musical (pas de répétition par mesure, contrairement à MusicXML). Pas d'armure à masquer : do majeur (0 altération) ne dessine rien.
-- **Piton fixe** : chaque note (jamais les silences) s'écrit avec le même piton `c`, seule la durée varie — reste centré sur l'unique ligne, comme `<unpitched>` en MusicXML.
+- **Piton fixe** : chaque note (jamais les silences) s'écrit avec le même piton `b` (sans marque d'octave), seule la durée varie — vérifié par rendu réel : avec `\clef "percussion"` sur une portée réduite à 1 ligne, `b` est le seul piton qui tombe exactement sur cette ligne (`c` tombe nettement dessous, avec des lignes supplémentaires). Rôle équivalent à `<unpitched>` B4 en MusicXML (même choix de piton, pas une coïncidence).
 - **Hampes** : `\override Stem.direction = #UP` global (pas de cas par note ; les rondes n'ont de toute façon pas de hampe).
 - **Ligatures** : `\autoBeamOff` global, ligatures posées à la main via `beam_groups` (`rythme.py`) : `[` sur la 1re note du groupe, `]` sur la dernière ; LilyPond calcule seul les barres partielles des doubles isolées.
 - **Chaque nouvelle ligne de rythme** (1re et 2e ligne d'un exercice, et chaque exercice suivant) commence par `\break`, sauf la toute première ligne de la page.
 - **Chaque exercice** :
-  - `\time N/4` réémis sur sa 1re mesure **seulement si le chiffrage change** par rapport à l'exercice précédent (LilyPond ne réaffiche pas un chiffrage identique ; contrairement à MuseScore qui le réaffichait systématiquement — jugé cosmétique, non testé visuellement comme un manque) ;
+  - `\time N/4` réémis sur sa 1re mesure **seulement si le chiffrage change** par rapport à l'exercice précédent (LilyPond ne réaffiche pas un chiffrage identique ; contrairement à MuseScore qui le réaffichait systématiquement). Vérifié en rendu réel sur les leçons de révision qui mélangent les chiffrages (8.2 notamment) : chaque changement s'affiche bien, ce qui suffit au critère pédagogique (« chiffrages qui changent », PEDAGOGIE.md) ;
   - repère `\mark \markup { \box "N.M.K" }` ;
   - double barre finale `\bar "|."` sur sa dernière mesure.
 - **Triolet** : `\tuplet 3/2 { c8[ c8 c8] }`, précédé de `\once \override TupletBracket.bracket-visibility = ##f` (garde le chiffre « 3 », masque le crochet).
@@ -110,8 +110,10 @@ Choix faits par lecture de la documentation LilyPond (2.24) ; **non encore revé
   - une syllabe par note/silence chuchoté ; un silence sans syllabe est un `\skip <durée>` (LilyPond consomme par défaut une syllabe par note *et* par silence : sans `\skip` explicite, les paroles se décaleraient au 1er silence non chuchoté) ;
   - un tiret final (`qua-`) devient `qua --` (continuation native LilyPond, tiret dessiné entre les 2 notes) ;
   - `_` → espace, texte entre guillemets pour rester une seule syllabe (`ron-de_lon-gue` → `"ron-de lon-gue"`) ;
+  - un mot tout en chiffres (compte de temps « 1 », « 2 »...) est aussi mis entre guillemets : sans ça, LilyPond lit un nombre isolé comme la durée du mot précédent, pas comme un nouveau mot (vu en rendu réel : « 1 2 3 » cassait la compilation) ;
   - échappement : `\` et `"` protégés (`_escape`), le reste (accents, « », `<>&`) passe tel quel (LilyPond n'est pas du XML).
-- **En-tête** : un seul `\markup \fill-line { \center-column { ... } }` avant le `\score`, 3 lignes en tailles absolues `\abs-fontsize` (12/22/13 pt, `config.py`) : chapitre (romain), titre (gras), consigne (italique). `rythme.check_header`/`largeurs.py` (métrique de la police Edwin de MuseScore) restent la vérification de largeur — **risque connu, non recalibré** : la police par défaut de LilyPond n'est pas Edwin, la marge de sécurité peut être légèrement fausse ; à recalibrer si un rendu réel déborde visiblement malgré un `check_header` qui passe.
+- **En-tête** : un seul `\markup \fill-line { \center-column { ... } }` avant le `\score`, 3 lignes en tailles absolues `\abs-fontsize` (12/22/13 pt, `config.py`) : chapitre (romain), titre (gras), consigne (italique). `rythme.check_header`/`largeurs.py` (métrique de la police Edwin de MuseScore) restent la vérification de largeur ; la police par défaut de LilyPond n'est pas Edwin, mais le rendu réel des 33 pages ne montre aucun débordement d'en-tête.
+- **Pas de numéro de mesure, pas de pied de page LilyPond** : `\layout { \context { \Score \remove "Bar_number_engraver" } }` (sinon un numéro apparaît sur chaque système) et `\header { tagline = ##f }` (sinon « LilyPond vX.Y.Z » s'affiche en bas de la dernière page).
 - **Mise en page** (`\paper`, valeurs dans `config.py`) :
   - A4, marges 15 mm, `indent = 0`, `print-page-number = ##f` ;
   - taille de portée : `#(set-global-staff-size STAFF_SIZE_MM * 72/25.4)` (mm → points) ;
