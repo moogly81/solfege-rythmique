@@ -90,7 +90,7 @@ Choix validés par essais avec MuseScore 4.7 ; ne pas les changer sans revérifi
 - **En-tête** :
   - **un seul** `<credit>` de type `title`, avec 3 `credit-words` séparés par `&#10;` : « Chapitre N · titre » (12), « N.M  titre » (22, gras), consigne (13, italique) ;
   - plusieurs credits distincts se chevauchent.
-- **Syllabes** : `<lyric number="1"><syllabic>single|begin|middle|end</syllabic><text>` en fin de note ; un tiret final (`qua-`) = la syllabe continue (begin/middle), tiret retiré du texte.
+- **Syllabes** : `<lyric number="1"><syllabic>single|begin|middle|end</syllabic><text>` en fin de note ; un tiret final (`qua-`) = la syllabe continue (begin/middle), tiret retiré du texte ; `_` → espace (« ron-de_lon-gue » sous une ronde).
 - **Triolet** : `time-modification` 3:2 ; `tuplet start` sur le 1er `t` et `stop` sur le 3e, `bracket="no"` (le 3 s'affiche sur la ligature).
 - **Silences** :
   - `p` = `<rest measure="yes"/>`, durée = mesure ;

@@ -16,7 +16,7 @@ def syllabic(prev: str | None, syll: str) -> str:
 
 
 def lyric_xml(prev: str | None, syll: str) -> str:
-    text = escape(syll.removesuffix("-") if len(syll) > 1 else syll)
+    text = escape((syll.removesuffix("-") if len(syll) > 1 else syll).replace("_", " "))  # « ron-de_lon-gue »
     return f'<lyric number="1"><syllabic>{syllabic(prev, syll)}</syllabic><text>{text}</text></lyric>'
 
 

@@ -82,3 +82,10 @@ def test_syllabes_sous_les_notes():
         ("single", "&"),
         ("single", "3"),
     ]
+
+
+def test_syllabe_avec_espace():
+    cahier = parse_cahier("# C\n## L\n- r\n  = ron-de_lon-gue\n")
+    chapter = cahier.chapters[0]
+    root = ET.fromstring(lesson_to_musicxml(chapter, chapter.lessons[0]).encode())
+    assert root.findtext(".//lyric/text") == "ron-de lon-gue"

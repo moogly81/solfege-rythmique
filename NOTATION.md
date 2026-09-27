@@ -96,7 +96,7 @@ Règles :
 - `Mesure :` vaut `2/4`, `3/4` ou `4/4`. Sans cette ligne, c'est `4/4`.
 - `- ` (tiret, espace) commence un exercice. Un exercice fait **1 ou 2 lignes**.
 - `3/4 :` au début d'un exercice change le chiffrage pour cet exercice seulement.
-- `= ` (décalé de 2 espaces, sous une ligne de rythme) : les **syllabes** à afficher sous les notes. Une syllabe par note (les silences n'en ont pas), `|` entre les mesures comme au-dessus. Un tiret à la fin (`qua-`) relie à la syllabe suivante. Cette ligne ne compte pas dans les 2 lignes d'un exercice.
+- `= ` (décalé de 2 espaces, sous une ligne de rythme) : les **syllabes** à afficher sous les notes. Une syllabe par note (les silences n'en ont pas), `|` entre les mesures comme au-dessus. Un tiret à la fin (`qua-`) relie à la syllabe suivante. `_` affiche une espace dans une syllabe : `ron-de_lon-gue` sous une seule ronde. Cette ligne ne compte pas dans les 2 lignes d'un exercice.
 
 ```
 - d d d d n n n | n d d d d n n
@@ -133,7 +133,7 @@ Le programme vérifie les rythmes, **pas la place sur la page**. Pour que chaque
 | 3/4 | 4 mesures | 3 mesures |
 | 2/4 | 4 à 6 mesures | 4 mesures |
 
-Une ligne avec syllabes prend plus de place : 2 mesures si elle contient des doubles, 3 sinon.
+Une ligne avec syllabes prend plus de place : 2 mesures si elle contient des croches ou des doubles, 3 sinon.
 
 Si une page déborde, le PDF aura une page de plus que prévu. Dans ce cas, raccourcir une ligne ou supprimer un exercice.
 

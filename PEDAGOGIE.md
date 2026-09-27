@@ -40,17 +40,19 @@ Le 1er exercice d'une leçon qui introduit une valeur ou un groupe affiche les s
 
 | Rythme | On dit |
 |---|---|
-| noires | « 1 2 3 4 » (le numéro du temps) |
-| 2 croches | « 1 et » |
+| ronde | « ron-de lon-gue » |
+| blanche | « blan-che » |
+| noire | « noir » |
+| 2 croches | « deux-croch » |
 | 4 doubles | « qua-tre dou-bles » |
 | croche + 2 doubles | « youp la la » |
 | 2 doubles + croche | « la pol-ka » |
 | croche pointée + double | « sau-te » (long, très court) |
 | triolet | « tri-o-let » |
 | syncope (croche, noire, croche) | « syn-co-pe » |
-| noire pointée + croche | « 1-2 et » |
+| noire pointée + croche | « noi-re croch' » |
 
-Une ligne avec syllabes prend plus de place : 2 mesures si elle contient des doubles, 3 sinon.
+Une ligne avec syllabes prend plus de place : 2 mesures si elle contient des croches ou des doubles, 3 sinon.
 
 ## Contenu à couvrir
 
@@ -70,4 +72,4 @@ Une ligne avec syllabes prend plus de place : 2 mesures si elle contient des dou
 7. **Le triolet** : triolet · triolets, croches et noires · révision triolet ou croches
 8. **Révisions générales** : révision générale 1 · révision générale 2 (chiffrages mélangés)
 
-Leçons avec syllabes (1er exercice) : 2.1, 4.1, 4.5, 5.1, 6.1, 6.3, 6.4, 6.7, 7.1.
+Leçons avec syllabes (1er exercice) : 1.1, 1.2, 2.1, 4.1, 4.5, 5.1, 6.1, 6.3, 6.4, 6.7, 7.1.
