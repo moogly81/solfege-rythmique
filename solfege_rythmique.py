@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Cahier de lecture rythmique (4/4, ligne rythmique unique).
+Cahier de lecture rythmique (ligne rythmique unique, 2/4, 3/4, 4/4).
 
-Pipeline : contenu (PAGES) -> un fichier MusicXML par page -> PDF via
+Pipeline : contenu (cahier.txt) -> un fichier MusicXML par page -> PDF via
 MuseScore 4 (gravure pro, police Leland) -> fusion des pages avec qpdf.
 
-Pour modifier le contenu : voir la section "CONTENU DES PAGES" plus bas.
+Pour modifier le contenu : editer cahier.txt (mode d'emploi : NOTATION.md),
+pas ce script.
 
 Prerequis : MuseScore 4 (https://musescore.org) et qpdf (`brew install qpdf`).
 Chemins surchargeables via les variables d'env MSCORE et QPDF.
@@ -20,248 +21,73 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 # ---------------------------------------------------------------------------
-# 1) CONTENU DES PAGES
+# 1) CONTENU : lu dans cahier.txt (format documente dans NOTATION.md)
 # ---------------------------------------------------------------------------
 #
-# Chaque page : un titre, une consigne, et une liste de lignes.
-# Chaque ligne est une chaine : les mesures sont separees par "|",
-# les notes par des espaces. Chaque mesure doit faire 4 temps (verifie).
-#
-#   r  = ronde (4)        p  = pause (4)
-#   b  = blanche (2)      dp = demi-pause (2)
-#   n  = noire (1)        s  = soupir (1)
-#   c  = croche (1/2)     ds = demi-soupir (1/2)
-#   d  = double-croche (1/4)
-#
-# Les croches / doubles-croches d'un meme temps sont automatiquement reliees
-# (ligatures), sauf si un silence les separe.
+# Le contenu musical et pedagogique n'est PAS dans ce script : il est dans
+# CONTENT_FILE, un fichier texte editable par un non-technicien.
+# load_cahier() le transforme en :
+#   [ {title, pages: [ {title, instruction, time, exercises:
+#        [ {time, lines: [texte, ...], src: [no de ligne, ...]} ] } ] } ]
 
-PAGES = [
-    {
-        "title": "1. La ronde et la pause",
-        "instruction": "Ronde = 4 temps (frappe sur 1). Pause = 4 temps de silence.",
-        "lines": [
-            "r | r | r | r",
-            "r | p | r | p",
-            "p | r | p | r",
-            "r | r | p | r",
-            "r | p | p | r",
-            "p | r | r | p",
-            "r | p | r | r",
-            "p | p | r | r",
-        ],
-    },
-    {
-        "title": "2. La blanche",
-        "instruction": "La blanche dure 2 temps : frappe sur 1 et sur 3.",
-        "lines": [
-            "b b | b b | b b | b b",
-            "r | b b | r | b b",
-            "b b | r | b b | p",
-            "r | p | b b | b b",
-            "b b | b b | r | p",
-            "p | b b | r | b b",
-            "b b | r | p | r",
-            "r | b b | p | b b",
-        ],
-    },
-    {
-        "title": "3. La demi-pause",
-        "instruction": "La demi-pause = 2 temps de silence. Elle est posée sur la ligne (la pause est accrochée dessous).",
-        "lines": [
-            "b dp | b dp | dp b | dp b",
-            "b b | b dp | b b | dp b",
-            "r | b dp | r | dp b",
-            "dp b | b b | b dp | r",
-            "b dp | p | dp b | r",
-            "b b | dp b | p | b dp",
-            "r | dp b | b dp | p",
-            "dp b | b b | r | b dp",
-        ],
-    },
-    {
-        "title": "4. Révision : rondes, blanches, pauses et demi-pauses",
-        "instruction": "Frappe les notes, compte les silences dans ta tête.",
-        "lines": [
-            "r | b b | p | b dp",
-            "b dp | r | dp b | p",
-            "b b | p | r | b b",
-            "dp b | b dp | b b | r",
-            "r | dp b | p | b b",
-            "p | b b | b dp | r",
-            "b dp | dp b | r | p",
-            "b b | r | dp b | r",
-        ],
-    },
-    {
-        "title": "5. La noire",
-        "instruction": "Compte 1 - 2 - 3 - 4 : la noire dure 1 temps.",
-        "lines": [
-            "n n n n | n n n n | n n n n | n n n n",
-            "n n b | b n n | r | n n n n",
-            "b b | n n b | p | n n n n",
-            "n b n | n n b | b dp | r",
-            "r | n n n n | b n n | dp b",
-            "n n n n | n b n | p | b b",
-            "b n n | r | n n b | n n n n",
-            "dp n n | n b n | b n n | r",
-        ],
-    },
-    {
-        "title": "6. Le soupir",
-        "instruction": "Le soupir = 1 temps de silence.",
-        "lines": [
-            "n n n s | n n n s | n s n s | r",
-            "s n n n | b n s | n n s n | b dp",
-            "n s n s | s n b | n n s s | p",
-            "b n s | s n n n | dp n s | r",
-            "s n s n | n n b | n s s n | b b",
-            "n s n n | b s n | s n n s | r",
-            "n n n n | n s n s | s n b | dp b",
-            "n s b | n n s n | b n s | p",
-        ],
-    },
-    {
-        "title": "7. Révision : noires, blanches, rondes et silences",
-        "instruction": "Regarde bien chaque signe : note ou silence ? Combien de temps ?",
-        "lines": [
-            "n n b | b s n | n n n s | r",
-            "b dp | n s n n | r | n n b",
-            "n s b | p | n n n n | b dp",
-            "r | n n s n | dp n n | b b",
-            "n n n s | b n s | dp b | r",
-            "b n n | s n b | p | n n n n",
-            "n s n s | r | b dp | n n b",
-            "dp n n | n n b | n s n s | r",
-        ],
-    },
-    {
-        "title": "8. La croche",
-        "instruction": "Compte 1 et 2 et 3 et 4 et : deux croches = 1 temps.",
-        "lines": [
-            "c c c c c c c c | n n n n | c c c c c c c c | r",
-            "c c n n n | n c c n n | b c c n | r",
-            "n n c c n | c c n b | n n n c c | b b",
-            "c c c c b | n c c n n | r | n n c c n",
-            "b c c c c | c c n n n | n n b | c c c c b",
-            "n c c n n | b n c c | c c c c n n | r",
-            "c c n c c n | r | n n c c n | b b",
-            "b n c c | c c c c n n | n c c b | r",
-        ],
-    },
-    {
-        "title": "9. Croches avec tout ce que tu connais",
-        "instruction": "Croches, noires, blanches, rondes... et les silences !",
-        "lines": [
-            "c c s n n | b c c s | c c c c dp | r",
-            "dp c c n | s c c b | n n c c s | p",
-            "c c n b | c c c c s n | dp n c c | r",
-            "s c c c c n | b s n | c c n c c n | p",
-            "n c c s c c | dp c c s | b c c n | r",
-            "c c c c c c n | s n b | c c s c c s | p",
-            "b c c s | n n c c n | dp s c c | r",
-            "c c n s n | c c c c b | s c c b | p",
-        ],
-    },
-    {
-        "title": "10. Le demi-soupir",
-        "instruction": "Le demi-soupir = 1/2 temps de silence (la moitié d'un soupir).",
-        "lines": [
-            "n n s n | n s n s | c c s c c n | n n n s",
-            "c c n s n | s n c c n | n s c c s | c c c c n s",
-            "n c ds n n | c ds c ds n n | n n c ds n | c c c ds n s",
-            "ds c n n n | n ds c n n | ds c ds c n n | n n ds c n",
-            "c c s c ds n | n ds c s n | c c c c s n | n s n s",
-            "s n c c n | ds c c c s n | n n ds c s | c c n n s",
-            "c ds c ds n n | n n s c c | ds c c c n s | n s c c n",
-            "n n c c s | c c ds c n s | s c c ds c n | n n n s",
-        ],
-    },
-    {
-        "title": "11. Croches et tous les silences",
-        "instruction": "Pause 4 temps, demi-pause 2 temps, soupir 1 temps, demi-soupir 1/2 temps.",
-        "lines": [
-            "c c n s n | b dp | c ds c c n n | p",
-            "ds c c c b | n s dp | c c c c n s | r",
-            "b c c n | dp c c n | n ds c s n | p",
-            "c c s b | ds c n dp | p | c c c c b",
-            "n n c c s | b ds c n | dp c c c c | r",
-            "c ds c ds b | p | n s c c n | dp b",
-            "dp n c c | c c n b | s n ds c n | p",
-            "b s n | c c c c dp | ds c n b | r",
-        ],
-    },
-    {
-        "title": "12. La double-croche",
-        "instruction": "Compte 1-i-et-a : quatre doubles-croches = 1 temps.",
-        "lines": [
-            "d d d d n n n | n d d d d n n | n n d d d d n",
-            "n n n d d d d | d d d d d d d d n n | n n n n",
-            "d d d d n d d d d n | n d d d d n d d d d | d d d d d d d d d d d d n",
-            "n n d d d d d d d d | d d d d n n n | n d d d d n n",
-            "d d d d d d d d d d d d d d d d | n n n n | d d d d n d d d d n",
-            "n d d d d d d d d n | d d d d n n n | n n n n",
-            "d d d d n n d d d d | n n d d d d n | d d d d d d d d n n",
-            "n n n d d d d | d d d d n d d d d n | n n n n",
-        ],
-    },
-    {
-        "title": "13. Doubles-croches et croches",
-        "instruction": "Croches « 1 et », doubles « 1-i-et-a » : écoute la différence !",
-        "lines": [
-            "d d d d n n n | n d d d d n n | n n n d d d d",
-            "d d d d d d d d n n | n n d d d d d d d d | n n n n",
-            "d d d d c c n n | c c d d d d n n | n d d d d c c n",
-            "d d d d n d d d d n | c c c c n n | n n c c d d d d",
-            "c c d d d d c c n | n d d d d n n | n n n n",
-            "n n d d d d n | d d d d c c n n | d d d d n n n",
-            "d d d d n c c n | c c c c d d d d n | n n n n",
-            "n c c d d d d n | d d d d d d d d n n | c c d d d d c c n",
-        ],
-    },
-    {
-        "title": "14. Doubles-croches et silences",
-        "instruction": "Garde bien le temps pendant les silences.",
-        "lines": [
-            "d d d d s c c n | c c d d d d s n | d d d d c ds n s",
-            "n s d d d d c c | ds c d d d d n s | b d d d d s",
-            "d d d d d d d d dp | s d d d d c c n | p",
-            "c c d d d d s n | dp d d d d c c | n ds c d d d d s",
-            "d d d d n s n | c ds c ds d d d d n | b dp",
-            "s d d d d s d d d d | n n c c s | d d d d c c b",
-            "dp d d d d n | c c s d d d d n | r",
-            "d d d d c c n s | ds c c ds d d d d n | p",
-        ],
-    },
-    {
-        "title": "15. Révision générale (1)",
-        "instruction": "Toutes les valeurs : prends ton temps, compte bien.",
-        "lines": [
-            "r | b dp | n s b | c c c c b",
-            "d d d d n n n | p | b c c n | dp b",
-            "n n s n | d d d d c c b | r | b b",
-            "c c ds c b | n d d d d s n | dp n n | r",
-            "p | d d d d n c c n | b s n | r",
-            "b b | c c s d d d d n | n ds c b | p",
-            "d d d d d d d d b | r | n s c c n | b dp",
-            "n c c d d d d n | s n b | dp c c n | r",
-        ],
-    },
-    {
-        "title": "16. Révision générale (2)",
-        "instruction": "Toutes les notes et tous les silences : bravo, tu sais tout lire !",
-        "lines": [
-            "r | b b | n n b | n n n n",
-            "c c n n n | b c c n | d d d d n n n | r",
-            "n s n s | c c ds c n n | b s n | p",
-            "d d d d c c n n | n n c c d d d d | b b | r",
-            "n ds c b | c c c c n n | dp n n | r",
-            "d d d d d d d d n n | c c n s n | n n c c ds c | b b",
-            "b n n | c c d d d d n s | ds c n n n | r",
-            "n c c n c c | d d d d n b | s n c c n | p",
-        ],
-    },
-]
+CONTENT_FILE = Path("cahier.txt")
+DEFAULT_TIME = "4/4"
+
+
+def load_cahier(path=CONTENT_FILE):
+    chapters = []
+    page = exercise = None
+
+    def fail(lineno, msg):
+        sys.exit(f"{path}, ligne {lineno} : {msg}")
+
+    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.rstrip()
+        text = line.strip()
+        if not text or text.startswith("//"):
+            continue
+        if text.startswith("## "):
+            if not chapters:
+                fail(lineno, "une leçon (##) doit être dans un chapitre (# Chapitre ...)")
+            page = {"title": text[3:].strip(), "instruction": "", "time": DEFAULT_TIME,
+                    "exercises": [], "src": lineno}
+            chapters[-1]["pages"].append(page)
+            exercise = None
+        elif text.startswith("# "):
+            title = text[2:].strip()
+            # « Chapitre 3 : titre » -> « titre » (le numero est automatique)
+            head, sep, rest = title.partition(":")
+            if sep and head.strip().lower().startswith("chapitre"):
+                title = rest.strip()
+            chapters.append({"title": title, "pages": []})
+            page = exercise = None
+        elif page is None:
+            fail(lineno, f"texte hors d'une leçon : « {text} » (ajouter une ligne « ## titre » avant)")
+        elif text.lower().startswith("consigne"):
+            page["instruction"] = text.partition(":")[2].strip()
+        elif text.lower().startswith("mesure"):
+            page["time"] = text.partition(":")[2].strip()
+        elif text.startswith("- "):
+            body, time_sig = text[2:].strip(), page["time"]
+            head, sep, rest = body.partition(":")
+            if sep and "/" in head:  # « - 3/4 : b n | ... »
+                time_sig, body = head.strip(), rest.strip()
+            exercise = {"time": time_sig, "lines": [body], "src": [lineno]}
+            page["exercises"].append(exercise)
+        elif line.startswith(" ") and exercise is not None:
+            exercise["lines"].append(text)
+            exercise["src"].append(lineno)
+        else:
+            fail(lineno, f"ligne non comprise : « {text} » "
+                         "(un exercice commence par « - », sa 2e ligne par 2 espaces)")
+
+    for chapter in chapters:
+        for page in chapter["pages"]:
+            if not page["exercises"]:
+                fail(page["src"], f"la leçon « {page['title']} » n'a aucun exercice")
+    if not chapters:
+        sys.exit(f"{path} : aucun chapitre trouvé")
+    return chapters
 
 
 # ---------------------------------------------------------------------------
@@ -290,47 +116,80 @@ STYLE_MSS = f"""<?xml version="1.0" encoding="UTF-8"?>
   <enableVerticalSpread>1</enableVerticalSpread>
   <minMeasureWidth>6</minMeasureWidth>
   <lastSystemFillLimit>0</lastSystemFillLimit>
+  <genCourtesyTimesig>0</genCourtesyTimesig>
 </Style></museScore>
 """
 
 # ---------------------------------------------------------------------------
-# 3) VALEURS RYTHMIQUES (en doubles-croches : 1 temps = 4)
+# 3) VALEURS RYTHMIQUES (1 temps = 12 divisions : divisible par 3 et par 4)
 # ---------------------------------------------------------------------------
 
-DIVISIONS = 4  # divisions MusicXML par noire
+DIVISIONS = 12  # divisions MusicXML par noire
 BEAT = DIVISIONS
 
 TOKENS = {
-    # token: (duree en divisions, type MusicXML, est_un_silence)
-    "r": (16, "whole", False),
-    "b": (8, "half", False),
-    "n": (4, "quarter", False),
-    "c": (2, "eighth", False),
-    "d": (1, "16th", False),
-    "p": (16, "whole", True),
-    "dp": (8, "half", True),
-    "s": (4, "quarter", True),
-    "ds": (2, "eighth", True),
+    # token: (duree en divisions, type MusicXML, est_un_silence, pointe)
+    "r": (48, "whole", False, False),
+    "b.": (36, "half", False, True),
+    "b": (24, "half", False, False),
+    "n.": (18, "quarter", False, True),
+    "n": (12, "quarter", False, False),
+    "c.": (9, "eighth", False, True),
+    "c": (6, "eighth", False, False),
+    "t": (4, "eighth", False, False),   # croche de triolet (3 dans 1 temps)
+    "d": (3, "16th", False, False),
+    "p": (None, "whole", True, False),  # duree = mesure entiere
+    "dp": (24, "half", True, False),
+    "s": (12, "quarter", True, False),
+    "ds": (6, "eighth", True, False),
 }
 BEAM_LEVELS = {"eighth": 1, "16th": 2}
 
 
-def parse_line(line, where):
+def duration(token, measure_len):
+    dur = TOKENS[token][0]
+    return measure_len if dur is None else dur
+
+
+def parse_time(time_sig, where):
+    try:
+        beats, beat_type = (int(x) for x in time_sig.split("/"))
+    except ValueError:
+        sys.exit(f"{where} : chiffrage invalide « {time_sig} »")
+    if beat_type != 4:
+        sys.exit(f"{where} : seuls les chiffrages en /4 sont gérés ({time_sig})")
+    return beats
+
+
+def parse_line(line, beats, where):
+    """Decoupe une ligne en mesures et verifie symboles, durees et triolets."""
+    measure_len = beats * BEAT
     measures = []
     for m_idx, chunk in enumerate(line.split("|"), start=1):
+        here = f"{where}, mesure {m_idx} ({chunk.strip()})"
         tokens = chunk.split()
         for t in tokens:
             if t not in TOKENS:
-                sys.exit(f"{where}, mesure {m_idx} : symbole inconnu « {t} »")
-        total = sum(TOKENS[t][0] for t in tokens)
-        if total != 4 * BEAT:
-            sys.exit(f"{where}, mesure {m_idx} : {total / BEAT:g} temps au lieu de 4 ({chunk.strip()})")
+                sys.exit(f"{here} : symbole inconnu « {t} »")
+        if "p" in tokens and tokens != ["p"]:
+            sys.exit(f"{here} : la pause « p » doit être seule dans sa mesure")
+        # Triolets : groupes de 3 « t » commencant sur un temps
+        pos, i = 0, 0
+        while i < len(tokens):
+            if tokens[i] == "t":
+                if pos % BEAT or tokens[i:i + 3] != ["t"] * 3:
+                    sys.exit(f"{here} : un triolet = 3 « t » au début d'un temps")
+                pos, i = pos + BEAT, i + 3
+            else:
+                pos, i = pos + duration(tokens[i], measure_len), i + 1
+        if pos != measure_len:
+            sys.exit(f"{here} : {pos / BEAT:g} temps au lieu de {beats}")
         measures.append(tokens)
     return measures
 
 
 # ---------------------------------------------------------------------------
-# 4) LIGATURES : regroupe les croches/doubles d'un meme temps
+# 4) LIGATURES : regroupe les croches/doubles/triolets d'un meme temps
 # ---------------------------------------------------------------------------
 
 def compute_beams(tokens):
@@ -339,7 +198,7 @@ def compute_beams(tokens):
     beams = [dict() for _ in tokens]
     groups, current, pos = [], [], 0
     for i, t in enumerate(tokens):
-        dur, kind, is_rest = TOKENS[t]
+        dur, kind, is_rest, _ = TOKENS[t]
         beamable = kind in BEAM_LEVELS and not is_rest
         if beamable and current and pos // BEAT == current_beat:
             current.append(i)
@@ -348,7 +207,7 @@ def compute_beams(tokens):
                 groups.append(current)
             current = [i] if beamable else []
             current_beat = pos // BEAT
-        pos += dur
+        pos += dur or 0
     if len(current) > 1:
         groups.append(current)
 
@@ -378,58 +237,85 @@ def compute_beams(tokens):
 # 5) GENERATION MUSICXML
 # ---------------------------------------------------------------------------
 
-def note_xml(token, beams, whole_measure):
-    dur, kind, is_rest = TOKENS[token]
+def note_xml(token, beams, measure_len, pos):
+    _, kind, is_rest, dotted = TOKENS[token]
     out = ["<note>"]
     if is_rest:
-        out.append('<rest measure="yes"/>' if whole_measure else "<rest/>")
+        out.append('<rest measure="yes"/>' if token == "p" else "<rest/>")
     else:
         out.append("<unpitched><display-step>B</display-step>"
                    "<display-octave>4</display-octave></unpitched>")
-    out.append(f"<duration>{dur}</duration>")
+    out.append(f"<duration>{duration(token, measure_len)}</duration>")
     if not is_rest:
         out.append('<instrument id="P1-I1"/>')
     out.append(f"<voice>1</voice><type>{kind}</type>")
+    if dotted:
+        out.append("<dot/>")
+    if token == "t":
+        out.append("<time-modification><actual-notes>3</actual-notes>"
+                   "<normal-notes>2</normal-notes></time-modification>")
     if not is_rest and kind != "whole":
         out.append("<stem>up</stem>")
     for level in sorted(beams):
         out.append(f'<beam number="{level}">{beams[level]}</beam>')
+    if token == "t" and pos % BEAT in (0, 2 * BEAT // 3):
+        kind_tuplet = "start" if pos % BEAT == 0 else "stop"
+        out.append(f'<notations><tuplet type="{kind_tuplet}" number="1" bracket="no"/></notations>')
     out.append("</note>")
     return "".join(out)
 
 
-def page_to_musicxml(page, page_no):
+def page_to_musicxml(chapter_no, chapter, page_no, page):
     tenths_per_mm = 40 / STAFF_SIZE_MM
     pw, ph = PAGE_W_MM * tenths_per_mm, PAGE_H_MM * tenths_per_mm
     mg = MARGIN_MM * tenths_per_mm
-
-    lines = [parse_line(l, f"Page {page_no}, ligne {i}") for i, l in enumerate(page["lines"], 1)]
+    lesson = f"{chapter_no}.{page_no}"
 
     measures_xml, number = [], 0
-    for line_idx, measures in enumerate(lines):
-        for m_idx, tokens in enumerate(measures):
-            number += 1
-            parts = [f'<measure number="{number}">']
-            if m_idx == 0:
-                new_sys = ' new-system="yes"' if line_idx > 0 else ""
-                parts.append(f"<print{new_sys}><measure-numbering>none</measure-numbering></print>")
-            if number == 1:
-                parts.append(
-                    f"<attributes><divisions>{DIVISIONS}</divisions>"
-                    "<key print-object=\"no\"><fifths>0</fifths></key>"
-                    "<time><beats>4</beats><beat-type>4</beat-type></time>"
-                    "<staff-details><staff-lines>1</staff-lines></staff-details>"
-                    "<clef><sign>percussion</sign></clef></attributes>"
-                )
-            beams = compute_beams(tokens)
-            whole = len(tokens) == 1
-            parts += [note_xml(t, b, whole) for t, b in zip(tokens, beams)]
-            if line_idx == len(lines) - 1 and m_idx == len(measures) - 1:
-                parts.append('<barline location="right"><bar-style>light-heavy</bar-style></barline>')
-            parts.append("</measure>")
-            measures_xml.append("".join(parts))
+    for ex_no, exercise in enumerate(page["exercises"], start=1):
+        lines, src = exercise["lines"], exercise["src"]
+        where = f"{CONTENT_FILE}, ligne {src[0]} (exercice {lesson}.{ex_no})"
+        beats = parse_time(exercise["time"], where)
+        if len(lines) > 2:
+            sys.exit(f"{where} : un exercice fait 1 ou 2 lignes, pas {len(lines)}")
+        parsed = [parse_line(l, beats, f"{CONTENT_FILE}, ligne {n} (exercice {lesson}.{ex_no})")
+                  for l, n in zip(lines, src)]
 
-    title, instr = escape(page["title"]), escape(page["instruction"])
+        for line_idx, measures in enumerate(parsed):
+            for m_idx, tokens in enumerate(measures):
+                number += 1
+                parts = [f'<measure number="{number}">']
+                if m_idx == 0 and number > 1:
+                    parts.append('<print new-system="yes"/>')
+                if line_idx == 0 and m_idx == 0:
+                    # Debut d'exercice : chiffrage (re)affiche + repere encadre N.M.K
+                    attrs = ""
+                    if number == 1:
+                        attrs += (f"<divisions>{DIVISIONS}</divisions>"
+                                  '<key print-object="no"><fifths>0</fifths></key>')
+                    attrs += f"<time><beats>{beats}</beats><beat-type>4</beat-type></time>"
+                    if number == 1:
+                        attrs += ("<staff-details><staff-lines>1</staff-lines></staff-details>"
+                                  "<clef><sign>percussion</sign></clef>")
+                    parts.append(f"<attributes>{attrs}</attributes>")
+                    parts.append('<direction placement="above"><direction-type>'
+                                 f'<rehearsal enclosure="rectangle">{lesson}.{ex_no}</rehearsal>'
+                                 "</direction-type></direction>")
+                beams = compute_beams(tokens)
+                pos = 0
+                for t, b in zip(tokens, beams):
+                    parts.append(note_xml(t, b, beats * BEAT, pos))
+                    pos += duration(t, beats * BEAT)
+                if line_idx == len(parsed) - 1 and m_idx == len(measures) - 1:
+                    parts.append('<barline location="right"><bar-style>light-heavy</bar-style></barline>')
+                parts.append("</measure>")
+                measures_xml.append("".join(parts))
+
+    chap = escape(f"Chapitre {chapter_no} · {chapter['title']}")
+    title = escape(f"{lesson}  {page['title']}")
+    instr = escape(page["instruction"])
+    # En-tete = un seul texte sur 3 lignes (chapitre / titre / consigne) :
+    # MuseScore empile mal plusieurs credits distincts (chevauchements).
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="4.0">
@@ -441,12 +327,10 @@ def page_to_musicxml(page, page_no):
       <page-margins type="both"><left-margin>{mg:.0f}</left-margin><right-margin>{mg:.0f}</right-margin>
       <top-margin>{mg:.0f}</top-margin><bottom-margin>{mg:.0f}</bottom-margin></page-margins>
     </page-layout>
-    <system-layout><system-distance>{SYSTEM_DISTANCE}</system-distance><top-system-distance>120</top-system-distance></system-layout>
+    <system-layout><system-distance>{SYSTEM_DISTANCE}</system-distance><top-system-distance>150</top-system-distance></system-layout>
   </defaults>
   <credit page="1"><credit-type>title</credit-type>
-    <credit-words justify="center" halign="center" valign="top" default-x="{pw / 2:.0f}" default-y="{ph - mg:.0f}" font-size="22" font-weight="bold">{title}</credit-words></credit>
-  <credit page="1"><credit-type>subtitle</credit-type>
-    <credit-words justify="center" halign="center" valign="top" default-x="{pw / 2:.0f}" default-y="{ph - mg - 40:.0f}" font-size="13" font-style="italic">{instr}</credit-words></credit>
+    <credit-words justify="center" halign="center" valign="top" default-x="{pw / 2:.0f}" default-y="{ph - mg:.0f}" font-size="12" font-weight="normal">{chap}&#10;</credit-words><credit-words font-size="22" font-weight="bold">{title}&#10;</credit-words><credit-words font-size="13" font-weight="normal" font-style="italic">{instr}</credit-words></credit>
   <part-list><score-part id="P1"><part-name print-object="no">Rythme</part-name>
     <score-instrument id="P1-I1"><instrument-name>Hand Clap</instrument-name></score-instrument>
     <midi-instrument id="P1-I1"><midi-channel>10</midi-channel><midi-unpitched>40</midi-unpitched></midi-instrument>
@@ -474,16 +358,17 @@ def build():
     qpdf = find_tool("QPDF", ["qpdf", "/opt/homebrew/bin/qpdf"])
 
     BUILD_DIR.mkdir(exist_ok=True)
+    for old in [*BUILD_DIR.glob("page_*.musicxml"), *BUILD_DIR.glob("page_*.pdf")]:
+        old.unlink()  # evite de garder des pages d'une version plus longue
     jobs, pdfs = [], []
-    for i, page in enumerate(PAGES, start=1):
-        xml_path = BUILD_DIR / f"page_{i:02d}.musicxml"
-        pdf_path = BUILD_DIR / f"page_{i:02d}.pdf"
-        xml_path.write_text(page_to_musicxml(page, i), encoding="utf-8")
-        jobs.append({"in": str(xml_path.resolve()), "out": str(pdf_path.resolve())})
-        pdfs.append(str(pdf_path))
+    for c_no, chapter in enumerate(load_cahier(), start=1):
+        for p_no, page in enumerate(chapter["pages"], start=1):
+            stem = f"page_{len(pdfs) + 1:02d}"
+            xml_path, pdf_path = BUILD_DIR / f"{stem}.musicxml", BUILD_DIR / f"{stem}.pdf"
+            xml_path.write_text(page_to_musicxml(c_no, chapter, p_no, page), encoding="utf-8")
+            jobs.append({"in": str(xml_path.resolve()), "out": str(pdf_path.resolve())})
+            pdfs.append(str(pdf_path))
 
-    for p in pdfs:
-        Path(p).unlink(missing_ok=True)
     style_file = BUILD_DIR / "style.mss"
     style_file.write_text(STYLE_MSS)
     job_file = BUILD_DIR / "job.json"
@@ -502,7 +387,7 @@ def build():
         print(f"Note : MuseScore a quitte avec le code {rc} apres export (bug connu a la fermeture, sans impact).")
 
     subprocess.run([qpdf, "--empty", "--pages", *pdfs, "--", OUTPUT_PDF], check=True)
-    print(f"PDF genere : {OUTPUT_PDF} ({len(PAGES)} pages)")
+    print(f"PDF genere : {OUTPUT_PDF} ({len(pdfs)} pages)")
 
 
 if __name__ == "__main__":
