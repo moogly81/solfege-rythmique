@@ -68,18 +68,19 @@ def test_portee_de_rythme(ly):
 
 
 def test_notes_sur_pitch_fixe(ly):
-    """Toutes les notes utilisent le même piton (« c »), seule la durée varie : reste centré sur l'unique ligne."""
+    """Toutes les notes utilisent le même piton (« b », seul à tomber sur l'unique ligne avec la
+    clé de percussion), seule la durée varie."""
     rythme = rythme_block(ly)
-    notes = re.findall(r"\bc\d[\d.\[\]]*", rythme)  # un chiffre après le « c » : exclut « clef », « count »...
+    notes = re.findall(r"\bb\d[\d.\[\]]*", rythme)  # un chiffre après le « b » : exclut « break »...
     assert notes  # au moins une note
-    assert all(re.fullmatch(r"c\d+\.?[\[\]]?", n) for n in notes)
+    assert all(re.fullmatch(r"b\d+\.?[\[\]]?", n) for n in notes)
 
 
 def test_ligatures(ly):
     rythme = rythme_block(ly)
     # 2/4 : « c. d c d d | d d c n » -> groupes [c. d] et [c d d], puis [d d c]
-    assert "c8.[ c16] c8[ c16 c16]" in rythme
-    assert "c16[ c16 c8] c4" in rythme
+    assert "b8.[ b16] b8[ b16 b16]" in rythme
+    assert "b16[ b16 b8] b4" in rythme
 
 
 def test_double_barre_en_fin_d_exercice(ly):
@@ -95,7 +96,7 @@ def test_pause_de_mesure(ly):
 def test_triolet(ly):
     rythme = rythme_block(ly)
     assert "TupletBracket.bracket-visibility = ##f" in rythme
-    assert r"\tuplet 3/2 { c8[ c8 c8] }" in rythme
+    assert r"\tuplet 3/2 { b8[ b8 b8] }" in rythme
 
 
 def test_en_tete_trois_tailles(ly):
@@ -124,7 +125,14 @@ def test_rythme_faux_refuse():
 
 def test_syllabes_sous_les_notes():
     ly = ly_of("# C\n## L\n- d d d d s n n\n  = qua- tre dou- bles & 3\n")
-    assert paroles_block(ly) == r"qua -- tre dou -- bles \skip 4 & 3"
+    assert paroles_block(ly) == r'qua -- tre dou -- bles \skip 4 & "3"'
+
+
+def test_syllabe_numerique_entre_guillemets():
+    """Un mot tout en chiffres (compte de temps) doit être entre guillemets : sinon LilyPond le lit
+    comme la durée du mot précédent, pas comme un nouveau mot."""
+    ly = ly_of("# C\n## L\nMesure : 3/4\n- n n n\n  = 1 2 3\n")
+    assert paroles_block(ly) == '"1" "2" "3"'
 
 
 def test_syllabe_avec_espace():

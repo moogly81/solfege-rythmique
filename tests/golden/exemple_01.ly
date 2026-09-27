@@ -14,12 +14,16 @@
   markup-system-spacing.basic-distance = 15.0
 }
 
+\header {
+  tagline = ##f
+}
+
 rythme = {
   \autoBeamOff
   \override Staff.StaffSymbol.line-count = #1
   \override Stem.direction = #UP
   \clef "percussion"
-  \time 4/4 \mark \markup { \box "1.1.1" } c1 | c2. c4 | c2 r2 | c4. c8 r4 r8 c8 \bar "|." | \break \mark \markup { \box "1.1.2" } c8[ c8] c16[ c16 c16 c16] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { c8[ c8 c8] } c8.[ c16] | R1 \bar "|." | \break \time 3/4 \mark \markup { \box "1.1.3" } c2. | c4 c4 c4 | c8 c4 c8 c4 | \break c8[ c16 c16] c16[ c16 c8] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { c8[ c8 c8] } | R2. \bar "|." | \break \time 2/4 \mark \markup { \box "1.1.4" } c8[ c8] c16[ c16 c16 c16] | c4. c8 | c8.[ c16] c8[ c16 c16] | c2 \bar "|." |
+  \time 4/4 \mark \markup { \box "1.1.1" } b1 | b2. b4 | b2 r2 | b4. b8 r4 r8 b8 \bar "|." | \break \mark \markup { \box "1.1.2" } b8[ b8] b16[ b16 b16 b16] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { b8[ b8 b8] } b8.[ b16] | R1 \bar "|." | \break \time 3/4 \mark \markup { \box "1.1.3" } b2. | b4 b4 b4 | b8 b4 b8 b4 | \break b8[ b16 b16] b16[ b16 b8] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { b8[ b8 b8] } | R2. \bar "|." | \break \time 2/4 \mark \markup { \box "1.1.4" } b8[ b8] b16[ b16 b16 b16] | b4. b8 | b8.[ b16] b8[ b16 b16] | b2 \bar "|." |
 }
 
 paroles = \lyricmode {
@@ -39,6 +43,8 @@ paroles = \lyricmode {
       \new Staff \new Voice = "rythme" \rythme
       \addlyrics \paroles
     >>
-    \layout {}
+    \layout {
+      \context { \Score \remove "Bar_number_engraver" }
+    }
   }
 }

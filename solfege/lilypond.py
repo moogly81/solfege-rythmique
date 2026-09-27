@@ -23,20 +23,23 @@ def _plain_duration(token: str, beats: int) -> str:
 
 
 def _atom(token: str, beats: int) -> str:
-    """Un token -> son atome LilyPond : hauteur fixe « c » (centrée sur la ligne unique),
+    """Un token -> son atome LilyPond : hauteur fixe « b » (seule à tomber sur l'unique ligne
+    de la portée réduite à 1 ligne, avec la clé de percussion — vérifié par rendu réel),
     « r » pour les silences ordinaires, « R » (repos de mesure) pour la pause."""
     is_rest = TOKENS[token].is_rest
     dur = _plain_duration(token, beats)
     if token == "p":
         return f"R{dur}"
-    return f"{'r' if is_rest else 'c'}{dur}"
+    return f"{'r' if is_rest else 'b'}{dur}"
 
 
 def _lyric_word(syll: str) -> str:
-    """« qua- » -> « qua -- » (continuation) ; « ron-de_lon-gue » -> une syllabe entre guillemets (espace visible)."""
+    """« qua- » -> « qua -- » (continuation) ; « ron-de_lon-gue » -> une syllabe entre guillemets (espace visible) ;
+    un mot tout en chiffres (compte de temps « 1 », « 2 »...) entre guillemets aussi : LilyPond lirait sinon
+    un nombre isolé comme la durée du mot précédent, pas comme un nouveau mot."""
     if syll.endswith("-"):
         return f"{_escape(syll[:-1])} --"
-    if "_" in syll or " " in syll:
+    if "_" in syll or " " in syll or syll.isdigit():
         return f'"{_escape(syll.replace("_", " "))}"'
     return _escape(syll)
 
@@ -127,6 +130,10 @@ def lesson_to_lilypond(chapter: Chapter, lesson: Lesson) -> str:
   markup-system-spacing.basic-distance = {config.TOP_SYSTEM_DISTANCE / 10}
 }}
 
+\\header {{
+  tagline = ##f
+}}
+
 rythme = {{
   \\autoBeamOff
   \\override Staff.StaffSymbol.line-count = #1
@@ -152,7 +159,9 @@ paroles = \\lyricmode {{
       \\new Staff \\new Voice = "rythme" \\rythme
       \\addlyrics \\paroles
     >>
-    \\layout {{}}
+    \\layout {{
+      \\context {{ \\Score \\remove "Bar_number_engraver" }}
+    }}
   }}
 }}
 """

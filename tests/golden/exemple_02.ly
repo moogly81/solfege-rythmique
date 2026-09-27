@@ -14,12 +14,16 @@
   markup-system-spacing.basic-distance = 15.0
 }
 
+\header {
+  tagline = ##f
+}
+
 rythme = {
   \autoBeamOff
   \override Staff.StaffSymbol.line-count = #1
   \override Stem.direction = #UP
   \clef "percussion"
-  \time 4/4 \mark \markup { \box "1.2.1" } c4 c4 c2 | c1 \bar "|." |
+  \time 4/4 \mark \markup { \box "1.2.1" } b4 b4 b2 | b1 \bar "|." |
 }
 
 paroles = \lyricmode {
@@ -39,6 +43,8 @@ paroles = \lyricmode {
       \new Staff \new Voice = "rythme" \rythme
       \addlyrics \paroles
     >>
-    \layout {}
+    \layout {
+      \context { \Score \remove "Bar_number_engraver" }
+    }
   }
 }
