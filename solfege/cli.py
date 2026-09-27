@@ -33,8 +33,9 @@ def write_ly(cahier: Cahier, build_dir: Path) -> list[Path]:
         old.unlink()
     paths = []
     for page_no, (chapter, lesson) in enumerate(cahier.lessons(), start=1):
-        path = build_dir / f"page_{page_no:02d}.ly"
-        path.write_text(lesson_to_lilypond(chapter, lesson), encoding="utf-8")
+        stem = f"page_{page_no:02d}"
+        path = build_dir / f"{stem}.ly"
+        path.write_text(lesson_to_lilypond(chapter, lesson, page_stem=stem), encoding="utf-8")
         paths.append(path)
     return paths
 

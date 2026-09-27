@@ -116,6 +116,17 @@ def test_taille_de_portee():
     assert float(taille) == pytest.approx(8.5 * 72 / 25.4, abs=0.01)
 
 
+def test_nom_de_sortie_force():
+    """page_stem force \\bookOutputName : nécessaire pour LilyPond 2.24 (Ubuntu 24.04, CI), qui
+    déduit mal le nom du 2e fichier (et suivants) compilé dans le même appel (\"lilypond
+    --output DIR a.ly b.ly\"), sans quoi le PDF du 2e fichier n'est jamais écrit."""
+    chapter = parse_cahier("# C\n## L\n- n n n n\n").chapters[0]
+    ly_sans = lesson_to_lilypond(chapter, chapter.lessons[0])
+    ly_avec = lesson_to_lilypond(chapter, chapter.lessons[0], page_stem="page_02")
+    assert r"\bookOutputName" not in ly_sans
+    assert '\\bookOutputName "page_02"' in ly_avec
+
+
 def test_rythme_faux_refuse():
     cahier = parse_cahier("# C\n## L\n- n n n\n")
     chapter = cahier.chapters[0]

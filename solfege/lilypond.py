@@ -107,11 +107,16 @@ def _body(lesson: Lesson) -> tuple[str, str]:
     return " ".join(music_lines), " ".join(lyric_lines)
 
 
-def lesson_to_lilypond(chapter: Chapter, lesson: Lesson) -> str:
+def lesson_to_lilypond(chapter: Chapter, lesson: Lesson, page_stem: str | None = None) -> str:
+    """page_stem : nom de fichier de sortie forcé (sans extension), ex. « page_02 ». Sans lui,
+    LilyPond déduit le nom depuis le fichier d'entrée : correct seul à seul, mais LilyPond 2.24.3
+    (Ubuntu 24.04, CI) déduit mal le nom du 2e fichier et suivants quand plusieurs .ly sont
+    compilés en un seul appel (`lilypond --output DIR a.ly b.ly`) : b.pdf n'est jamais écrit."""
     music, lyrics = _body(lesson)
     chap = _escape(f"Chapitre {chapter.number} · {chapter.title}")
     title = _escape(f"{lesson.number}  {lesson.title}")
     instr = _escape(lesson.instruction)
+    output_name = f'\\bookOutputName "{page_stem}"\n  ' if page_stem else ""
 
     staff_size_pt = config.STAFF_SIZE_MM * 72 / 25.4
     return f"""\\version "2.24.0"
@@ -147,7 +152,7 @@ paroles = \\lyricmode {{
 }}
 
 \\book {{
-  \\markup \\fill-line {{
+  {output_name}\\markup \\fill-line {{
     \\center-column {{
       \\abs-fontsize #{config.CHAPTER_PT} "{chap}"
       \\abs-fontsize #{config.TITLE_PT} \\bold "{title}"
