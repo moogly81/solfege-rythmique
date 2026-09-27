@@ -62,7 +62,16 @@ class Cahier:
 
 
 def load_cahier(path: Path) -> Cahier:
-    return parse_cahier(path.read_text(encoding="utf-8"), source=str(path))
+    # utf-8-sig : accepte le BOM que certains éditeurs (Bloc-notes) ajoutent en tête de fichier
+    return parse_cahier(path.read_text(encoding="utf-8-sig"), source=str(path))
+
+
+def _field_value(stripped: str, name: str, where: str) -> str:
+    """« Consigne : texte » -> « texte » ; refuse l'absence de « : »."""
+    head, sep, value = stripped.partition(":")
+    if not sep:
+        raise CahierError(f"{where} : « {head.strip()} » doit être suivi de « : » (exemple : « {name} : ... »)")
+    return value.strip()
 
 
 def _chapter_title(text: str) -> str:
@@ -88,6 +97,7 @@ def parse_cahier(text: str, source: str = "cahier.txt") -> Cahier:
         stripped = line.strip()
         if not stripped or stripped.startswith("//"):
             continue
+        indented = raw[:1] in (" ", "\t", " ")  # 2e ligne d'exercice ou syllabes : décalée
         if stripped.startswith("## "):
             if not chapters:
                 raise fail("une leçon (##) doit être dans un chapitre (# Chapitre ...)")
@@ -101,9 +111,11 @@ def parse_cahier(text: str, source: str = "cahier.txt") -> Cahier:
         elif lesson is None:
             raise fail(f"texte hors d'une leçon : « {stripped} » (ajouter une ligne « ## titre » avant)")
         elif stripped.lower().startswith("consigne"):
-            lesson.instruction = stripped.partition(":")[2].strip()
+            lesson.instruction = _field_value(stripped, "Consigne", where)
         elif stripped.lower().startswith("mesure"):
-            lesson.time = stripped.partition(":")[2].strip()
+            if lesson.exercises:
+                raise fail("« Mesure : » doit être placée avant le 1er exercice de la leçon")
+            lesson.time = _field_value(stripped, "Mesure", where)
         elif stripped.startswith("- "):
             body, time_sig = stripped[2:].strip(), lesson.time
             head, sep, rest = body.partition(":")
@@ -112,16 +124,17 @@ def parse_cahier(text: str, source: str = "cahier.txt") -> Cahier:
             number = f"{lesson.number}.{len(lesson.exercises) + 1}"
             exercise = Exercise(number, time_sig, [SourceLine(body, where)])
             lesson.exercises.append(exercise)
-        elif stripped.startswith("=") and line.startswith(" ") and exercise is not None:
+        elif stripped.startswith("=") and indented and exercise is not None:
             last = exercise.lines[-1]
             if last.syllables is not None:
                 raise fail("une seule ligne de syllabes « = » sous chaque ligne de rythme")
             exercise.lines[-1] = replace(last, syllables=stripped[1:].strip(), syllables_where=where)
-        elif line.startswith(" ") and exercise is not None:
+        elif indented and exercise is not None:
             exercise.lines.append(SourceLine(stripped, where))
         else:
             raise fail(
-                f"ligne non comprise : « {stripped} » (un exercice commence par « - », sa 2e ligne par 2 espaces)"
+                f"ligne non comprise : « {stripped} » "
+                "(un exercice commence par « - », sa 2e ligne par 2 espaces ou une tabulation)"
             )
 
     if not chapters:

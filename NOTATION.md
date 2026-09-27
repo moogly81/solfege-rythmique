@@ -92,15 +92,15 @@ Règles :
 
 - `# Chapitre N : titre` : le numéro écrit est ignoré, c'est l'ordre dans le fichier qui compte.
 - `## titre` ouvre une leçon. Chaque leçon fait **une page**.
-- `Consigne :` donne la phrase affichée sous le titre. Elle doit être courte : elle doit tenir sur une ligne.
-- `Mesure :` vaut `2/4`, `3/4` ou `4/4`. Sans cette ligne, c'est `4/4`.
-- `- ` (tiret, espace) commence un exercice. Un exercice fait **1 ou 2 lignes**.
+- `Consigne :` donne la phrase affichée sous le titre. Elle doit tenir sur une ligne : le programme mesure sa largeur (comme celle du titre) et refuse ce qui dépasse. Le « : » est obligatoire.
+- `Mesure :` vaut `2/4`, `3/4` ou `4/4`. Sans cette ligne, c'est `4/4`. Elle se place **avant** le premier exercice de la leçon.
+- `- ` (tiret, espace) commence un exercice. Un exercice fait **1 ou 2 lignes**. La 2e ligne est décalée (2 espaces, ou une tabulation).
 - `3/4 :` au début d'un exercice change le chiffrage pour cet exercice seulement.
-- `= ` (décalé de 2 espaces, sous une ligne de rythme) : les **syllabes** à afficher sous les notes. Une syllabe par note (les silences n'en ont pas), `|` entre les mesures comme au-dessus. Un tiret à la fin (`qua-`) relie à la syllabe suivante. `_` affiche une espace dans une syllabe : `ron-de_lon-gue` sous une seule ronde. Cette ligne ne compte pas dans les 2 lignes d'un exercice.
+- `= ` (décalé, sous une ligne de rythme) : les **syllabes** à afficher sous les notes. Une syllabe par note, `|` entre les mesures comme au-dessus. Un tiret à la fin (`qua-`) relie à la syllabe suivante. `_` affiche une espace dans une syllabe : `ron-de_lon-gue` sous une seule ronde. Les silences n'ont pas de syllabe, sauf si on leur en donne une **entre parenthèses** : `(chut)` s'affiche « chut » sous le silence. Cette ligne ne compte pas dans les 2 lignes d'un exercice.
 
 ```
-- d d d d n n n | n d d d d n n
-  = qua- tre dou- bles 2 3 4 | 1 qua- tre dou- bles 3 4
+- d d d d n n s | n d d d d n n
+  = qua- tre dou- bles noir noir (chut) | noir qua- tre dou- bles noir noir
 ```
 - Les lignes vides et les commentaires `//` sont libres : on en met autant qu'on veut.
 
@@ -111,12 +111,18 @@ Règles :
 Le programme refuse et explique :
 
 - une mesure qui n'a pas le bon nombre de temps (4 en 4/4, 3 en 3/4, 2 en 2/4) ;
+- une mesure vide (deux barres `|` à la suite, ou une barre en fin de ligne) ;
 - un symbole inconnu (faute de frappe, par exemple `nn` au lieu de `n n`) ;
+- un chiffrage impossible (`0/4`, `6/8`) ;
 - un triolet incomplet ou décalé : `t t t` doit commencer sur un temps ;
 - une pause `p` qui n'est pas seule dans sa mesure : pour 2 temps de silence, écrire `dp` ;
 - un exercice de plus de 2 lignes ;
-- une ligne de syllabes qui n'a pas autant de syllabes que de notes, ou pas autant de mesures ;
+- `Consigne` ou `Mesure` sans « : », ou `Mesure :` placée après un exercice ;
+- un titre de leçon ou une consigne trop large pour la page : « le titre de la leçon est trop large pour la page (≈ 219 mm, maximum 180 mm) : le raccourcir » ;
+- une ligne de syllabes qui n'a pas autant de syllabes que de notes, ou pas autant de mesures ; une syllabe entre parenthèses qui n'est pas sous un silence ; une parenthèse non fermée ;
 - du texte mal placé (par exemple une ligne d'exercice sans `- ` devant).
+
+Si le PDF est produit mais qu'une leçon ne tient pas sur sa page, le programme le dit aussi : « Attention : la leçon 4.3 déborde (2 pages au lieu de 1) : raccourcir des lignes. »
 
 ---
 
@@ -133,9 +139,9 @@ Le programme vérifie les rythmes, **pas la place sur la page**. Pour que chaque
 | 3/4 | 4 mesures | 3 mesures |
 | 2/4 | 4 à 6 mesures | 4 mesures |
 
-Une ligne avec syllabes prend plus de place : 2 mesures si elle contient des croches ou des doubles, 3 sinon.
+Une ligne avec syllabes prend plus de place : 2 mesures si elle contient des croches ou des doubles, 3 sinon (4 en 2/4).
 
-Si une page déborde, le PDF aura une page de plus que prévu. Dans ce cas, raccourcir une ligne ou supprimer un exercice.
+Si une page déborde, le programme l'annonce (« la leçon 4.3 déborde ») et le PDF a une page de plus que prévu. Dans ce cas, raccourcir une ligne ou supprimer un exercice.
 
 ---
 
@@ -150,5 +156,5 @@ Si une page déborde, le PDF aura une page de plus que prévu. Dans ce cas, racc
 | croche pointée + double | `c. d` | 1 temps |
 | triolet | `t t t` | 1 temps |
 | noire pointée + croche | `n. c` | 2 temps |
-| demi-soupir + croche | `ds c` | 1 temps |
+| contretemps (demi-soupir + croche) | `ds c` | 1 temps |
 | syncope (croche, noire, croche) | `c n c` | 2 temps |

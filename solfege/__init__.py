@@ -8,4 +8,4 @@
   cli       enchaîne les étapes (python3 -m solfege)
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

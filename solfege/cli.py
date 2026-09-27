@@ -3,6 +3,8 @@
 python3 -m solfege          tout (PDF)
 python3 -m solfege check    vérifie cahier.txt seulement (rapide, sans MuseScore)
 python3 -m solfege xml      vérifie + écrit les MusicXML dans build/
+
+Codes de retour : 0 ok ; 1 erreur (message sur stderr) ; 2 PDF produit mais une leçon déborde.
 """
 
 import argparse
@@ -13,7 +15,7 @@ from . import config
 from .cahier import Cahier, load_cahier
 from .erreurs import CahierError, SolfegeError
 from .musicxml import lesson_to_musicxml
-from .rendu import merge_pdfs, render_pdfs
+from .rendu import merge_pdfs, overflow_warnings, render_pdfs
 from .rythme import check
 
 
@@ -57,9 +59,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.step == "xml":
             print(f"MusicXML écrits dans {args.build}/ ({len(xml_paths)} pages)")
             return 0
-        merge_pdfs(render_pdfs(xml_paths, args.build), args.output)
+        pdfs = render_pdfs(xml_paths, args.build)
+        warnings = overflow_warnings(pdfs, [lesson.number for _, lesson in cahier.lessons()])
+        for w in warnings:
+            print(w, file=sys.stderr)
+        merge_pdfs(pdfs, args.output)
         print(f"PDF généré : {args.output} ({len(xml_paths)} pages)")
-        return 0
+        return 2 if warnings else 0
     except SolfegeError as e:
         print(e, file=sys.stderr)
         return 1

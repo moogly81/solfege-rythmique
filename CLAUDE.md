@@ -17,16 +17,16 @@ Sources de vérité (priorité décroissante en cas de conflit) :
 
 ## Vérifier après chaque modification
 
+- Outils : `.venv/bin/ruff`, `.venv/bin/pytest` (si absents : `.venv/bin/pip install -e ".[dev]"`, à faire lancer par l'utilisateur si le sandbox refuse) ; `qpdf`, `pdftoppm` (poppler), MuseScore 4 (`/Applications/MuseScore 4.app`).
 - `ruff check . && ruff format --check . && pytest`.
-- `python3 -m solfege` : chaque `build/page_NN.pdf` fait 1 page (`qpdf --show-npages`). Sinon la leçon déborde : raccourcir des lignes.
-- Rendu visuel : `pdftoppm -png -r 50 -f N -l N cahier_rythme.pdf "$TMPDIR/x"`, puis regarder l'image.
-- Refactor sans changement de contenu : `build/page_*.musicxml` identiques octet pour octet (`cmp` contre une copie faite avant).
+- `python3 -m solfege` : code de retour 0 ; un code 2 signale sur stderr « la leçon N.M déborde » : raccourcir des lignes.
+- Rendu visuel : `pdftoppm -png -r 50 -f N -l N cahier_rythme.pdf "$TMPDIR/x"`, puis regarder l'image (au moins les pages de « Leçons avec syllabes »).
+- Refactor sans changement de rendu : `tests/test_golden.py` passe tel quel. Rendu changé volontairement : `pytest tests/test_golden.py --regenerer-golden`, et le dire.
 - Sandbox Claude Code : erreurs parasites de MuseScore (crashpad, XPC, DNS), sans lien. Le SIGABRT à la fermeture est connu (SPEC § 3.4).
 
 ## Environnement / git
 
-- Dépôt **privé** GitHub `moogly81/solfege-rythmique`. Identité git **locale** au dépôt : moogly81, `2691085+moogly81@users.noreply.github.com`.
-- Ne jamais modifier la config git globale : elle est pro (dsonney@pictet.com).
-- `GH_TOKEN` pointe sur le compte pro (dsonney_pictet). Pour moogly81 : `env -u GH_TOKEN gh auth token --user moogly81`. Ne jamais afficher un token.
+- Dépôt **public** GitHub. Identités git/GitHub (compte perso vs pro, adresses, `GH_TOKEN`) : voir `.claude/identite.md` (non versionné, ne pas recréer ces infos ici).
+- Ne jamais modifier la config git globale : elle est pro.
 - Sandbox : écriture dans `.git` interdite. Donner à l'utilisateur la commande git à lancer avec `!`.
 - Ne pas supprimer `.venv/` ni les PNG de `build/` sans demande explicite.

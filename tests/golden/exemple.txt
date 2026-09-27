@@ -1,0 +1,19 @@
+// Cahier de référence pour tests/test_golden.py : couvre tous les symboles,
+// les 3 chiffrages, les syllabes (notes, silences, espace) et le triolet.
+# Chapitre 1 : Référence & <essai>
+
+## Toutes les valeurs
+Consigne : Ne pas modifier sans régénérer la référence.
+Mesure : 4/4
+
+- r | b. n | b dp | n. c s ds c
+  = ron-de_lon-gue | blan-che noir | blan-che (chut) | noi-re croch' (chut) (ch) croch
+- c c d d d d t t t c. d | p
+- 3/4 : b. | n n n | c n c n
+        c d d d d c t t t | p
+- 2/4 : c c d d d d | n. c | c. d c d d | b
+
+## Deuxième page
+Consigne : Une 2e leçon pour tester la numérotation des pages.
+
+- n n b | r

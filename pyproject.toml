@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "solfege"
-version = "0.2.0"
+version = "0.3.0"
 description = "Cahier de lecture rythmique pour enfant : cahier.txt -> MusicXML -> PDF (MuseScore 4)"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []  # bibliothèque standard seulement ; outils externes : MuseScore 4, qpdf
+dependencies = []  # bibliothèque standard seulement ; outils externes : MuseScore 4 (4.7.x testé), qpdf ; pdftoppm pour vérifier
 
 [project.optional-dependencies]
 dev = [
@@ -37,3 +37,4 @@ ignore = ["RUF001", "RUF002", "RUF003"]  # guillemets « » et apostrophes fran�
 
 [tool.ruff.lint.per-file-ignores]
 "solfege/musicxml.py" = ["E501"]  # gabarit MusicXML : lignes longues voulues (sortie identique)
+"solfege/largeurs.py" = ["E501"]  # tables de largeurs de glyphes, une police par ligne

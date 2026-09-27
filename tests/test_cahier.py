@@ -1,6 +1,6 @@
 import pytest
 
-from solfege.cahier import parse_cahier
+from solfege.cahier import load_cahier, parse_cahier
 from solfege.erreurs import CahierError
 
 EXEMPLE = """\
@@ -58,6 +58,15 @@ def test_titre_sans_prefixe_chapitre():
         ("# C\n## L\nr | r\n", "ligne 3 : ligne non comprise : « r | r »"),
         ("# C\n## Vide\n", "ligne 2 : la leçon « Vide » n'a aucun exercice"),
         ("# C\n## L\n- r\n  r\n  r\n", "ligne 3 (exercice 1.1.1) : un exercice fait 1 ou 2 lignes, pas 3"),
+        (
+            "# C\n## L\nConsigne compte\n- r\n",
+            "ligne 3 : « Consigne compte » doit être suivi de « : » (exemple : « Consigne : ... »)",
+        ),
+        ("# C\n## L\nMesure 3/4\n- b.\n", "ligne 3 : « Mesure 3/4 » doit être suivi de « : »"),
+        (
+            "# C\n## L\n- r\nMesure : 3/4\n- b.\n",
+            "ligne 4 : « Mesure : » doit être placée avant le 1er exercice de la leçon",
+        ),
     ],
 )
 def test_erreurs_de_structure(texte, message):
@@ -81,3 +90,22 @@ def test_ligne_de_syllabes():
 def test_deux_lignes_de_syllabes_refusees():
     with pytest.raises(CahierError, match="ligne 5 : une seule ligne de syllabes"):
         parse_cahier("# C\n## L\n- r\n  = 1\n  = 1\n")
+
+
+@pytest.mark.parametrize("indent", [" ", "  ", "\t", "    "])
+def test_deuxieme_ligne_decalee_par_espaces_ou_tabulation(indent):
+    (exercise,) = parse_cahier(f"# C\n## L\n- r\n{indent}b b\n{indent}= 1 2\n").chapters[0].lessons[0].exercises
+    assert [line.text for line in exercise.lines] == ["r", "b b"]
+    assert exercise.lines[1].syllables == "1 2"
+
+
+def test_bom_en_tete_de_fichier_accepte(tmp_path):
+    path = tmp_path / "cahier.txt"
+    path.write_text("# C\n## L\n- r\n", encoding="utf-8-sig")
+    cahier = load_cahier(path)
+    assert cahier.chapters[0].title == "C"
+    assert cahier.source == str(path)
+
+
+def test_consigne_vide_acceptee():
+    assert parse_cahier("# C\n## L\nConsigne :\n- r\n").chapters[0].lessons[0].instruction == ""

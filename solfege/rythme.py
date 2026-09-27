@@ -5,11 +5,14 @@
 
 from typing import NamedTuple
 
-from .cahier import Cahier, Exercise, SourceLine
+from . import config
+from .cahier import Cahier, Chapter, Exercise, Lesson, SourceLine
 from .erreurs import CahierError
+from .largeurs import BOLD, ITALIC, LARGEUR_UTILE_MM, ROMAN, largeur_mm
 
 DIVISIONS = 12  # divisions MusicXML par noire
 BEAT = DIVISIONS
+MAX_BEATS = 12  # au-delà, ce n'est plus une mesure lisible
 
 
 class Token(NamedTuple):
@@ -52,6 +55,8 @@ def parse_time(time_sig: str, where: str) -> int:
         raise CahierError(f"{where} : chiffrage invalide « {time_sig} »") from None
     if beat_type != 4:
         raise CahierError(f"{where} : seuls les chiffrages en /4 sont gérés ({time_sig})")
+    if not 1 <= beats <= MAX_BEATS:
+        raise CahierError(f"{where} : chiffrage invalide « {time_sig} » (de 1 à {MAX_BEATS} temps par mesure)")
     return beats
 
 
@@ -62,6 +67,8 @@ def parse_line(line: str, beats: int, where: str) -> list[Measure]:
     for m_idx, chunk in enumerate(line.split("|"), start=1):
         here = f"{where}, mesure {m_idx} ({chunk.strip()})"
         tokens = chunk.split()
+        if not tokens:
+            raise CahierError(f"{where}, mesure {m_idx} : mesure vide (deux barres « | » à la suite ?)")
         for t in tokens:
             if t not in TOKENS:
                 raise CahierError(f"{here} : symbole inconnu « {t} »")
@@ -82,24 +89,55 @@ def parse_line(line: str, beats: int, where: str) -> list[Measure]:
     return measures
 
 
-def parse_syllables(syllables: str, measures: list[Measure], where: str) -> list[list[str]]:
-    """« qua- tre dou- bles | 1 2 » -> syllabes de chaque mesure, une par note (silences exclus)."""
+Syllables = list[str | None]  # une entrée par symbole de la mesure ; None = rien à afficher
+
+
+def parse_syllables(syllables: str, measures: list[Measure], where: str) -> list[Syllables]:
+    """« qua- tre dou- bles (chut) | 1 2 » -> pour chaque mesure, une syllabe par symbole.
+
+    Une syllabe par note ; un silence n'en a pas, sauf si on lui en donne une
+    entre parenthèses : « (chut) ».
+    """
     chunks = syllables.split("|")
     if len(chunks) != len(measures):
         raise CahierError(f"{where} : {len(chunks)} mesures de syllabes pour {len(measures)} mesures de rythme")
     result = []
     for m_idx, (chunk, tokens) in enumerate(zip(chunks, measures, strict=True), start=1):
+        here = f"{where}, mesure {m_idx} ({chunk.strip()})"
         sylls = chunk.split()
+        for s in sylls:
+            if s.strip("-") == "" or s in ("()", "(-)"):
+                raise CahierError(f"{here} : syllabe vide « {s} »")
+            if s.startswith("(") != s.endswith(")"):
+                raise CahierError(f"{here} : parenthèse non fermée « {s} »")
         n_notes = sum(not TOKENS[t].is_rest for t in tokens)
-        if len(sylls) != n_notes:
-            raise CahierError(f"{where}, mesure {m_idx} ({chunk.strip()}) : {len(sylls)} syllabes pour {n_notes} notes")
-        result.append(sylls)
+        n_plain = sum(not s.startswith("(") for s in sylls)
+        if n_plain != n_notes:
+            raise CahierError(f"{here} : {n_plain} syllabes pour {n_notes} notes")
+        aligned: Syllables = []
+        pending = iter(sylls)
+        nxt = next(pending, None)
+        for t in tokens:
+            if TOKENS[t].is_rest:
+                if nxt is not None and nxt.startswith("("):
+                    aligned.append(nxt[1:-1])
+                    nxt = next(pending, None)
+                else:
+                    aligned.append(None)
+            else:
+                if nxt is not None and nxt.startswith("("):
+                    raise CahierError(f"{here} : « {nxt} » : une syllabe entre parenthèses va sous un silence")
+                aligned.append(nxt)
+                nxt = next(pending, None)
+        if nxt is not None:
+            raise CahierError(f"{here} : « {nxt} » : une syllabe entre parenthèses va sous un silence")
+        result.append(aligned)
     return result
 
 
 class ParsedLine(NamedTuple):
     measures: list[Measure]
-    syllables: list[list[str]] | None
+    syllables: list[Syllables] | None
 
 
 def _parse_source_line(line: SourceLine, beats: int, number: str) -> ParsedLine:
@@ -116,10 +154,29 @@ def parse_exercise(exercise: Exercise) -> tuple[int, list[ParsedLine]]:
     return beats, [_parse_source_line(line, beats, exercise.number) for line in exercise.lines]
 
 
-def check(cahier: Cahier) -> list[str]:
-    """Vérifie tous les exercices ; renvoie toutes les erreurs (au plus une par ligne)."""
+def check_header(chapter: Chapter, lesson: Lesson) -> list[str]:
+    """Les 3 lignes de l'en-tête doivent tenir sur la largeur de la page (mesure avec la police de MuseScore)."""
+    lines = (
+        (f"Chapitre {chapter.number} · {chapter.title}", ROMAN, config.CHAPTER_PT, "le titre du chapitre"),
+        (f"{lesson.number}  {lesson.title}", BOLD, config.TITLE_PT, "le titre de la leçon"),
+        (lesson.instruction, ITALIC, config.INSTRUCTION_PT, "la consigne"),
+    )
     errors = []
-    for _, lesson in cahier.lessons():
+    for text, font, size, what in lines:
+        width = largeur_mm(text, font, size)
+        if width > LARGEUR_UTILE_MM:
+            errors.append(
+                f"{lesson.where} : {what} est trop large pour la page "
+                f"(≈ {width:.0f} mm, maximum {LARGEUR_UTILE_MM:.0f} mm) : le raccourcir"
+            )
+    return errors
+
+
+def check(cahier: Cahier) -> list[str]:
+    """Vérifie en-têtes et exercices ; renvoie toutes les erreurs (au plus une par ligne)."""
+    errors = []
+    for chapter, lesson in cahier.lessons():
+        errors.extend(check_header(chapter, lesson))
         for exercise in lesson.exercises:
             try:
                 beats = parse_time(exercise.time, exercise.where)
@@ -136,19 +193,21 @@ def check(cahier: Cahier) -> list[str]:
 
 def compute_beams(tokens: Measure) -> list[dict[int, str]]:
     """Pour chaque note de la mesure : {niveau: valeur} de ligatures MusicXML
-    (begin/continue/end/forward hook/backward hook). Groupes = par temps."""
+    (begin/continue/end/forward hook/backward hook).
+
+    Groupes = par temps : un nouveau groupe commence sur chaque temps ; une valeur
+    qui chevauche deux temps (« c c. d ») reste dans le groupe où elle a commencé."""
     beams: list[dict[int, str]] = [{} for _ in tokens]
-    groups, current, current_beat, pos = [], [], -1, 0
+    groups, current, pos = [], [], 0
     for i, t in enumerate(tokens):
         tok = TOKENS[t]
         beamable = tok.kind in BEAM_LEVELS and not tok.is_rest
-        if beamable and current and pos // BEAT == current_beat:
+        if beamable and current and pos % BEAT:
             current.append(i)
         else:
             if len(current) > 1:
                 groups.append(current)
             current = [i] if beamable else []
-            current_beat = pos // BEAT
         pos += tok.duration or 0
     if len(current) > 1:
         groups.append(current)

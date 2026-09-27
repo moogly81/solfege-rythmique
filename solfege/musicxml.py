@@ -21,6 +21,8 @@ def lyric_xml(prev: str | None, syll: str) -> str:
 
 
 def note_xml(token: str, beams: dict[int, str], measure_len: int, pos: int, lyric: str = "") -> str:
+    """Ordre imposé par MusicXML : (rest|unpitched), duration, instrument, voice, type, dot,
+    time-modification, stem, beam, notations, lyric."""
     _, kind, is_rest, dotted = TOKENS[token]
     out = ["<note>"]
     if is_rest:
@@ -57,7 +59,7 @@ def _measures_xml(lesson: Lesson) -> list[str]:
         prev_syll = None
         for line_idx, (measures, syllables) in enumerate(parsed):
             for m_idx, tokens in enumerate(measures):
-                sylls = iter(syllables[m_idx]) if syllables else None
+                sylls = syllables[m_idx] if syllables else [None] * len(tokens)
                 number += 1
                 parts = [f'<measure number="{number}">']
                 if m_idx == 0 and number > 1:
@@ -80,10 +82,9 @@ def _measures_xml(lesson: Lesson) -> list[str]:
                         "</direction-type></direction>"
                     )
                 pos = 0
-                for t, b in zip(tokens, compute_beams(tokens), strict=True):
+                for t, b, syll in zip(tokens, compute_beams(tokens), sylls, strict=True):
                     lyric = ""
-                    if sylls is not None and not TOKENS[t].is_rest:
-                        syll = next(sylls)
+                    if syll is not None:
                         lyric, prev_syll = lyric_xml(prev_syll, syll), syll
                     parts.append(note_xml(t, b, measure_len, pos, lyric))
                     pos += duration(t, measure_len)
@@ -116,10 +117,10 @@ def lesson_to_musicxml(chapter: Chapter, lesson: Lesson) -> str:
       <page-margins type="both"><left-margin>{mg:.0f}</left-margin><right-margin>{mg:.0f}</right-margin>
       <top-margin>{mg:.0f}</top-margin><bottom-margin>{mg:.0f}</bottom-margin></page-margins>
     </page-layout>
-    <system-layout><system-distance>{config.SYSTEM_DISTANCE}</system-distance><top-system-distance>150</top-system-distance></system-layout>
+    <system-layout><system-distance>{config.SYSTEM_DISTANCE}</system-distance><top-system-distance>{config.TOP_SYSTEM_DISTANCE}</top-system-distance></system-layout>
   </defaults>
   <credit page="1"><credit-type>title</credit-type>
-    <credit-words justify="center" halign="center" valign="top" default-x="{pw / 2:.0f}" default-y="{ph - mg:.0f}" font-size="12" font-weight="normal">{chap}&#10;</credit-words><credit-words font-size="22" font-weight="bold">{title}&#10;</credit-words><credit-words font-size="13" font-weight="normal" font-style="italic">{instr}</credit-words></credit>
+    <credit-words justify="center" halign="center" valign="top" default-x="{pw / 2:.0f}" default-y="{ph - mg:.0f}" font-size="{config.CHAPTER_PT}" font-weight="normal">{chap}&#10;</credit-words><credit-words font-size="{config.TITLE_PT}" font-weight="bold">{title}&#10;</credit-words><credit-words font-size="{config.INSTRUCTION_PT}" font-weight="normal" font-style="italic">{instr}</credit-words></credit>
   <part-list><score-part id="P1"><part-name print-object="no">Rythme</part-name>
     <score-instrument id="P1-I1"><instrument-name>Hand Clap</instrument-name></score-instrument>
     <midi-instrument id="P1-I1"><midi-channel>10</midi-channel><midi-unpitched>40</midi-unpitched></midi-instrument>

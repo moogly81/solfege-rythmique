@@ -15,6 +15,10 @@ QPDF_CANDIDATES = ["qpdf", "/opt/homebrew/bin/qpdf"]
 STAFF_SIZE_MM = 8.5
 # Écart vertical entre deux lignes (en dixièmes, 40 = hauteur d'une portée).
 SYSTEM_DISTANCE = 140
+# Distance entre l'en-tête (3 lignes de texte) et la 1re ligne de musique (dixièmes).
+TOP_SYSTEM_DISTANCE = 150
+# Tailles (points) des 3 lignes de l'en-tête : chapitre (romain), titre (gras), consigne (italique).
+CHAPTER_PT, TITLE_PT, INSTRUCTION_PT = 12, 22, 13
 PAGE_W_MM, PAGE_H_MM = 210, 297
 MARGIN_MM = 15
 
