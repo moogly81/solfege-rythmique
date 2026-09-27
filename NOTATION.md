@@ -5,7 +5,13 @@ Tout le contenu du cahier est dans **`cahier.txt`** : chapitres, leçons, consig
 Après chaque modification, régénérer le PDF :
 
 ```
-python3 solfege_rythmique.py
+python3 -m solfege
+```
+
+Pour seulement vérifier `cahier.txt` (rapide, sans créer le PDF) :
+
+```
+python3 -m solfege check
 ```
 
 Si quelque chose est faux (une mesure trop longue, un symbole inconnu), le programme s'arrête **sans rien casser** et indique où est l'erreur :

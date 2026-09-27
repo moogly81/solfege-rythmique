@@ -6,24 +6,32 @@ Ce fichier ne contient **que la technique**. Le reste vit dans trois fichiers mo
 - @NOTATION.md : format de `cahier.txt` (symboles, structure, limites de mise en page) ;
 - `cahier.txt` : le contenu (chapitres, leçons, consignes, exercices).
 
-Pour ajouter ou modifier des exercices, **éditer `cahier.txt`, jamais le script**, en respectant PEDAGOGIE.md et NOTATION.md. Si une règle pédagogique change, mettre à jour PEDAGOGIE.md (et la « Progression actuelle » quand des leçons sont ajoutées ou retirées).
+Pour ajouter ou modifier des exercices, **éditer `cahier.txt`, jamais le code**, en respectant PEDAGOGIE.md et NOTATION.md. Si une règle pédagogique change, mettre à jour PEDAGOGIE.md (et la « Progression actuelle » quand des leçons sont ajoutées ou retirées).
 
 ## Pipeline
 
-`cahier.txt` → `load_cahier()` → un MusicXML par page (`build/`) → PDF via MuseScore 4 CLI (`-j` job + `-S` style) → fusion avec `qpdf` → `cahier_rythme.pdf`.
+`cahier.txt` → modèle → vérification → un MusicXML par page (`build/`) → PDF via MuseScore 4 CLI (`-j` job + `-S` style) → fusion `qpdf` → `cahier_rythme.pdf`.
 
-- Lancer : `python3 solfege_rythmique.py` (pas de dépendance Python externe ; `.venv/` = reste de l'ancienne version reportlab).
-- Prérequis : MuseScore 4 (`/Applications/MuseScore 4.app`), `qpdf`. Surcharge : env `MSCORE`, `QPDF`.
-- Sections du script :
-  1. lecture de `cahier.txt` ;
-  2. réglages de mise en page (`STAFF_SIZE_MM`, `STYLE_MSS`) ;
-  3. valeurs (`TOKENS`, 12 divisions par noire) et validation (`parse_line`) ;
-  4. ligatures (`compute_beams`) ;
-  5. MusicXML ;
-  6. rendu et fusion.
+- Lancer : `python3 -m solfege [check|xml|pdf]` (défaut `pdf` ; options `--cahier`, `--build`, `--output`). `solfege_rythmique.py` = raccourci historique.
+- Aucune dépendance Python à l'exécution (stdlib, Python ≥ 3.11). Prérequis externes : MuseScore 4 (`/Applications/MuseScore 4.app`), `qpdf`. Surcharge : env `MSCORE`, `QPDF`.
+- Paquet `solfege/`, une étape par module, chacune testable seule :
+  - `cahier.py` : texte → dataclasses `Cahier/Chapter/Lesson/Exercise` (structure + numérotation N.M.K) ;
+  - `rythme.py` : `TOKENS` (12 divisions par noire), `parse_line`, `check` (toutes les erreurs d'un coup), `compute_beams` ;
+  - `musicxml.py` : `lesson_to_musicxml` (pure, sans E/S) ;
+  - `rendu.py` : MuseScore puis qpdf ;
+  - `cli.py` : enchaîne ; `config.py` : chemins et mise en page (`STAFF_SIZE_MM`, `STYLE_MSS`) ; `erreurs.py`.
+- Erreurs utilisateur = exceptions `SolfegeError` (jamais `sys.exit` hors de `cli`), affichées sans trace.
+
+## Qualité
+
+- Dev : `pip install -e ".[dev]"` (pytest, ruff épinglés dans `pyproject.toml`, mis à jour par Dependabot).
+- `ruff check . && ruff format --check . && pytest`. CI GitHub Actions identique (`.github/workflows/ci.yml`), sans MuseScore : le test de rendu (`@pytest.mark.rendu`) y est ignoré.
+- `tests/test_contenu.py` vérifie le vrai `cahier.txt` : rythmes, 25 pages, 4-6 exercices et 6-10 lignes par leçon, consigne présente, jamais une seule valeur. Si une règle de PEDAGOGIE.md change, adapter ce test.
+- Nouvelle règle de validation ou de rendu : ajouter un test.
 
 ## Vérifier après chaque modification
 
+- Tests verts.
 - Chaque `build/page_NN.pdf` fait exactement 1 page (`qpdf --show-npages`). Sinon, la leçon déborde : raccourcir des lignes.
 - Rendu visuel : `pdftoppm -png -r 50 -f N -l N cahier_rythme.pdf "$TMPDIR/x"`, puis regarder l'image.
 - Pour un refactor sans changement de contenu : les `build/page_*.musicxml` doivent rester identiques octet pour octet (`cmp` contre une copie faite avant).
