@@ -14,3 +14,4 @@ Pistes issues des revues du 2026-09-27, non réalisées parce qu'elles demandent
 
 - [ ] **MuseScore → LilyPond** : LilyPond (`brew install lilypond`, disponible sur les runners CI) donnerait un rendu déterministe et testable en CI, sans le SIGABRT à la fermeture ni la dépendance à une application graphique. Coût : réécrire `musicxml.py` en générateur `.ly` et revalider tout le rendu (ligatures, triolets, syllabes, une ligne, 1 page par leçon).
 - [ ] **Un seul MusicXML pour tout le cahier** (`<print new-page="yes"/>` par leçon) au lieu de 33 fichiers + `job.json` + fusion `qpdf` : à essayer, MuseScore importe mal les `<credit page="N">` au-delà de la page 1.
+- [ ] **Générer les artefacts** : publier `cahier_rythme.pdf` comme artefact de build CI (`actions/upload-artifact`) plutôt que (ou en plus de) le garder versionné dans le dépôt.
