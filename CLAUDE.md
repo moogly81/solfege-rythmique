@@ -17,7 +17,7 @@ Sources de vérité (priorité décroissante en cas de conflit) :
 
 ## Vérifier après chaque modification
 
-- Outils : `.venv/bin/ruff`, `.venv/bin/pytest` (si absents : `.venv/bin/pip install -e ".[dev]"`, à faire lancer par l'utilisateur si le sandbox refuse) ; `qpdf`, `pdftoppm` (poppler), MuseScore 4 (`/Applications/MuseScore 4.app`).
+- Outils : `.venv/bin/ruff`, `.venv/bin/pytest` (si absents : `uv venv && uv pip install -e ".[dev]"`, à faire lancer par l'utilisateur si le sandbox refuse) ; `qpdf`, `pdftoppm` (poppler), MuseScore 4 (`/Applications/MuseScore 4.app`).
 - `ruff check . && ruff format --check . && pytest`.
 - `python3 -m solfege` : code de retour 0 ; un code 2 signale sur stderr « la leçon N.M déborde » : raccourcir des lignes.
 - Rendu visuel : `pdftoppm -png -r 50 -f N -l N cahier_rythme.pdf "$TMPDIR/x"`, puis regarder l'image (au moins les pages de « Leçons avec syllabes »).

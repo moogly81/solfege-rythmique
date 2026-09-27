@@ -23,7 +23,7 @@ cahier.txt → modèle (dataclasses) → vérification rythmique → 1 MusicXML 
   - `qpdf` (PATH ou `/opt/homebrew/bin/qpdf`).
   - Surcharge : variables d'env `MSCORE`, `QPDF`. Si la variable est définie mais pointe sur un chemin inexistant : erreur explicite, pas de repli silencieux.
 - Outils de vérification seulement (pas requis pour générer) : `pdftoppm` (poppler) pour le contrôle visuel.
-- Installation (macOS) : MuseScore 4 depuis musescore.org, `brew install qpdf poppler`, puis `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"`. Le `.venv/` du dépôt doit contenir `pytest` et `ruff`.
+- Installation (macOS) : MuseScore 4 depuis musescore.org, `brew install qpdf poppler uv`, puis `uv venv && uv pip install -e ".[dev]"`. Le `.venv/` du dépôt doit contenir `pytest` et `ruff`.
 - Code, messages, docs : **français** (messages avec accents et guillemets « »).
 - Erreurs utilisateur = exceptions `SolfegeError` (sous-classes `CahierError`, `RenduError`) ; seul le CLI les transforme en message sur stderr + code 1, sans trace Python.
 
@@ -175,8 +175,8 @@ Choix validés par essais avec MuseScore 4.7 ; ne pas les changer sans revérifi
 - CI `.github/workflows/ci.yml` :
   - sur push `main` et PR, `permissions: contents: read` ;
   - matrice Python `"3.11"` et `"3.x"` (dernière stable) ;
-  - `actions/checkout@v7`, `actions/setup-python@v7` (tags majeurs, mis à jour par Dependabot) ;
-  - `pip install -e ".[dev]"`, `ruff check .`, `ruff format --check .`, `python -m solfege check`, `pytest` (pas de MuseScore : tests `rendu` ignorés).
+  - `actions/checkout@v7`, `actions/setup-python@v7`, `astral-sh/setup-uv@v7` (tags majeurs, mis à jour par Dependabot) ;
+  - `uv pip install --system -e ".[dev]"`, `ruff check .`, `ruff format --check .`, `python -m solfege check`, `pytest` (pas de MuseScore : tests `rendu` ignorés).
 - `.github/dependabot.yml` : `pip` et `github-actions`, hebdomadaire, un groupe par écosystème.
 - `.gitignore` :
   - `build/`, `__pycache__/`, `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `*.egg-info/`, `.claude/`, `.DS_Store` ;

@@ -19,7 +19,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e ".[dev]"
+      - uses: astral-sh/setup-uv@v7
+      - run: uv pip install --system -e ".[dev]"
       - run: ruff check .
       - run: ruff format --check .
       - run: python -m solfege check
