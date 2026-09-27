@@ -36,6 +36,12 @@ def paroles_block(ly: str) -> str:
     return match.group(1).strip()
 
 
+def hidden_block(ly: str) -> str:
+    match = re.search(r"cachee = \{(.*?)\n\}\n", ly, re.DOTALL)
+    assert match, ly
+    return match.group(1).strip()
+
+
 @pytest.fixture
 def ly():
     return ly_of(CAHIER)
@@ -68,19 +74,19 @@ def test_portee_de_rythme(ly):
 
 
 def test_notes_sur_pitch_fixe(ly):
-    """Toutes les notes utilisent le même piton (« b », seul à tomber sur l'unique ligne avec la
-    clé de percussion), seule la durée varie."""
+    """Toutes les notes utilisent le même piton (« c' », seul à tomber au milieu de l'unique
+    ligne avec la clé de percussion), seule la durée varie."""
     rythme = rythme_block(ly)
-    notes = re.findall(r"\bb\d[\d.\[\]]*", rythme)  # un chiffre après le « b » : exclut « break »...
+    notes = re.findall(r"c'\d[\d.\[\]]*", rythme)
     assert notes  # au moins une note
-    assert all(re.fullmatch(r"b\d+\.?[\[\]]?", n) for n in notes)
+    assert all(re.fullmatch(r"c'\d+\.?[\[\]]?", n) for n in notes)
 
 
 def test_ligatures(ly):
     rythme = rythme_block(ly)
     # 2/4 : « c. d c d d | d d c n » -> groupes [c. d] et [c d d], puis [d d c]
-    assert "b8.[ b16] b8[ b16 b16]" in rythme
-    assert "b16[ b16 b8] b4" in rythme
+    assert "c'8.[ c'16] c'8[ c'16 c'16]" in rythme
+    assert "c'16[ c'16 c'8] c'4" in rythme
 
 
 def test_double_barre_en_fin_d_exercice(ly):
@@ -96,7 +102,7 @@ def test_pause_de_mesure(ly):
 def test_triolet(ly):
     rythme = rythme_block(ly)
     assert "TupletBracket.bracket-visibility = ##f" in rythme
-    assert r"\tuplet 3/2 { b8[ b8 b8] }" in rythme
+    assert r"\tuplet 3/2 { c'8[ c'8 c'8] }" in rythme
 
 
 def test_en_tete_trois_tailles(ly):
@@ -160,3 +166,25 @@ def test_silence_sans_syllabe_est_saute():
     """Sans ligne de syllabes du tout, chaque silence est un « \\skip », pas un mot."""
     ly = ly_of("# C\n## L\n- n n s n\n")
     assert paroles_block(ly) == r"\skip 4 \skip 4 \skip 4 \skip 4"
+
+
+def test_syllabe_chuchotee_sous_une_pause():
+    """Bug réel (rendu visuel) : \\addlyrics/\\lyricsto saute toujours un silence, même correctement
+    positionné dans la liste des paroles — la syllabe glissait alors sur la note suivante (« chut »
+    affiché sous la ronde de l'exercice suivant au lieu de la pause). Fixé par une piste invisible
+    (« cachee », en notes uniquement) à laquelle les paroles sont maintenant rattachées : voir
+    « test_piste_invisible_pour_les_paroles »."""
+    ly = ly_of("# C\n## L\n- r | r | p\n  = ron-de_lon-gue | ron-de_lon-gue | (chut)\n")
+    assert paroles_block(ly) == '"ron-de lon-gue" "ron-de lon-gue" chut'
+
+
+def test_piste_invisible_pour_les_paroles():
+    """Les paroles sont rattachées à une piste « cachee » (NullVoice, jamais imprimée) qui ne
+    contient que des notes, jamais de silence : c'est elle que \\lyricsto suit, pas la portée
+    imprimée (où un silence, « r » ou « R », ne consomme jamais de syllabe)."""
+    ly = ly_of("# C\n## L\n- r | p\n  = ron-de_lon-gue | (chut)\n")
+    assert '\\new NullVoice = "cachee" \\cachee' in ly
+    assert '\\lyricsto "cachee" \\paroles' in ly
+    hidden = hidden_block(ly)
+    assert re.fullmatch(r"(c'\d+\.? ?\|? ?)+", hidden), hidden
+    assert "r" not in re.sub(r"c'\d+\.?", "", hidden)  # aucun silence dans la piste cachée

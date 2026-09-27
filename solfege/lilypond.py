@@ -22,15 +22,19 @@ def _plain_duration(token: str, beats: int) -> str:
     return KIND_DUR[kind] + ("." if dotted else "")
 
 
+PITCH = "c'"  # seule hauteur à tomber exactement au milieu de l'unique ligne (clé de percussion,
+# portée réduite à 1 ligne) — vérifié par rendu réel : « b » (sans marque d'octave, donc B3)
+# tombe dans l'espace juste en dessous de la ligne, pas dessus.
+
+
 def _atom(token: str, beats: int) -> str:
-    """Un token -> son atome LilyPond : hauteur fixe « b » (seule à tomber sur l'unique ligne
-    de la portée réduite à 1 ligne, avec la clé de percussion — vérifié par rendu réel),
-    « r » pour les silences ordinaires, « R » (repos de mesure) pour la pause."""
+    """Un token -> son atome LilyPond : hauteur fixe PITCH pour une note, « r » pour un silence
+    ordinaire, « R » (repos de mesure) pour la pause."""
     is_rest = TOKENS[token].is_rest
     dur = _plain_duration(token, beats)
     if token == "p":
         return f"R{dur}"
-    return f"{'r' if is_rest else 'b'}{dur}"
+    return f"r{dur}" if is_rest else f"{PITCH}{dur}"
 
 
 def _lyric_word(syll: str) -> str:
@@ -69,17 +73,37 @@ def _measure_music(tokens: list[str], beats: int) -> str:
     return " ".join(atoms)
 
 
+def _measure_hidden(tokens: list[str], beats: int) -> str:
+    """Même rythme qu'une mesure de « _measure_music », mais toujours en notes (jamais de silence) :
+    sert de piste invisible (« NullVoice ») pour aligner les paroles. Nécessaire parce que
+    \\addlyrics/\\lyricsto saute toujours silencieusement un silence, même écrit en note suivie de
+    « \\rest » — vérifié par rendu réel : aucune syllabe ne s'attache jamais à un silence si les
+    paroles suivent directement la portée imprimée. Une piste jumelle où chaque temps, silences
+    compris, est une vraie note contourne le problème : \\lyricsto s'y accroche alors normalement,
+    y compris pour chuchoter une syllabe sur ce qui est un silence à l'écran."""
+    atoms, i = [], 0
+    while i < len(tokens):
+        if tokens[i] == "t":
+            trio = " ".join(f"{PITCH}{_plain_duration(t, beats)}" for t in tokens[i : i + 3])
+            atoms.append(r"\tuplet 3/2 { " + trio + " }")
+            i += 3
+            continue
+        atoms.append(f"{PITCH}{_plain_duration(tokens[i], beats)}")
+        i += 1
+    return " ".join(atoms)
+
+
 def _measure_lyrics(tokens: list[str], sylls: list[str | None], beats: int) -> str:
-    """Paroles d'une mesure : une syllabe par note/silence chuchoté, "\\skip" ailleurs
-    (les silences ne « mangent » pas de syllabe par défaut sous LilyPond)."""
+    """Paroles d'une mesure : une syllabe par note ou silence chuchoté, "\\skip" ailleurs — aligné
+    sur la piste invisible (« _measure_hidden »), où chaque token, silence compris, est une note."""
     words = []
     for token, syll in zip(tokens, sylls, strict=True):
         words.append(_lyric_word(syll) if syll is not None else f"\\skip {_plain_duration(token, beats)}")
     return " ".join(words)
 
 
-def _body(lesson: Lesson) -> tuple[str, str]:
-    music_lines, lyric_lines = [], []
+def _body(lesson: Lesson) -> tuple[str, str, str]:
+    music_lines, hidden_lines, lyric_lines = [], [], []
     prev_time = None
     first_source_line = True
     for exercise in lesson.exercises:
@@ -100,11 +124,9 @@ def _body(lesson: Lesson) -> tuple[str, str]:
                 if line_idx == len(parsed) - 1 and m_idx == len(measures) - 1:
                     music_lines.append(r'\bar "|."')
                 music_lines.append("|")
-                if has_syllables:
-                    lyric_lines.append(_measure_lyrics(tokens, sylls, beats))
-                else:
-                    lyric_lines.append(" ".join(f"\\skip {_plain_duration(t, beats)}" for t in tokens))
-    return " ".join(music_lines), " ".join(lyric_lines)
+                hidden_lines.append(_measure_hidden(tokens, beats))
+                lyric_lines.append(_measure_lyrics(tokens, sylls, beats))
+    return " ".join(music_lines), " ".join(hidden_lines), " ".join(lyric_lines)
 
 
 def lesson_to_lilypond(chapter: Chapter, lesson: Lesson, page_stem: str | None = None) -> str:
@@ -112,7 +134,7 @@ def lesson_to_lilypond(chapter: Chapter, lesson: Lesson, page_stem: str | None =
     LilyPond déduit le nom depuis le fichier d'entrée : correct seul à seul, mais LilyPond 2.24.3
     (Ubuntu 24.04, CI) déduit mal le nom du 2e fichier et suivants quand plusieurs .ly sont
     compilés en un seul appel (`lilypond --output DIR a.ly b.ly`) : b.pdf n'est jamais écrit."""
-    music, lyrics = _body(lesson)
+    music, hidden, lyrics = _body(lesson)
     chap = _escape(f"Chapitre {chapter.number} · {chapter.title}")
     title = _escape(f"{lesson.number}  {lesson.title}")
     instr = _escape(lesson.instruction)
@@ -141,10 +163,15 @@ def lesson_to_lilypond(chapter: Chapter, lesson: Lesson, page_stem: str | None =
 
 rythme = {{
   \\autoBeamOff
+  \\numericTimeSignature
   \\override Staff.StaffSymbol.line-count = #1
   \\override Stem.direction = #UP
   \\clef "percussion"
   {music}
+}}
+
+cachee = {{
+  {hidden}
 }}
 
 paroles = \\lyricmode {{
@@ -161,8 +188,11 @@ paroles = \\lyricmode {{
   }}
   \\score {{
     <<
-      \\new Staff \\new Voice = "rythme" \\rythme
-      \\addlyrics \\paroles
+      \\new Staff <<
+        \\new Voice = "rythme" \\rythme
+        \\new NullVoice = "cachee" \\cachee
+      >>
+      \\new Lyrics \\lyricsto "cachee" \\paroles
     >>
     \\layout {{
       \\context {{ \\Score \\remove "Bar_number_engraver" }}

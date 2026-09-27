@@ -20,10 +20,15 @@
 
 rythme = {
   \autoBeamOff
+  \numericTimeSignature
   \override Staff.StaffSymbol.line-count = #1
   \override Stem.direction = #UP
   \clef "percussion"
-  \time 4/4 \mark \markup { \box "1.2.1" } b4 b4 b2 | b1 \bar "|." |
+  \time 4/4 \mark \markup { \box "1.2.1" } c'4 c'4 c'2 | c'1 \bar "|." |
+}
+
+cachee = {
+  c'4 c'4 c'2 c'1
 }
 
 paroles = \lyricmode {
@@ -40,8 +45,11 @@ paroles = \lyricmode {
   }
   \score {
     <<
-      \new Staff \new Voice = "rythme" \rythme
-      \addlyrics \paroles
+      \new Staff <<
+        \new Voice = "rythme" \rythme
+        \new NullVoice = "cachee" \cachee
+      >>
+      \new Lyrics \lyricsto "cachee" \paroles
     >>
     \layout {
       \context { \Score \remove "Bar_number_engraver" }

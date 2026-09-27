@@ -20,10 +20,15 @@
 
 rythme = {
   \autoBeamOff
+  \numericTimeSignature
   \override Staff.StaffSymbol.line-count = #1
   \override Stem.direction = #UP
   \clef "percussion"
-  \time 4/4 \mark \markup { \box "1.1.1" } b1 | b2. b4 | b2 r2 | b4. b8 r4 r8 b8 \bar "|." | \break \mark \markup { \box "1.1.2" } b8[ b8] b16[ b16 b16 b16] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { b8[ b8 b8] } b8.[ b16] | R1 \bar "|." | \break \time 3/4 \mark \markup { \box "1.1.3" } b2. | b4 b4 b4 | b8 b4 b8 b4 | \break b8[ b16 b16] b16[ b16 b8] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { b8[ b8 b8] } | R2. \bar "|." | \break \time 2/4 \mark \markup { \box "1.1.4" } b8[ b8] b16[ b16 b16 b16] | b4. b8 | b8.[ b16] b8[ b16 b16] | b2 \bar "|." |
+  \time 4/4 \mark \markup { \box "1.1.1" } c'1 | c'2. c'4 | c'2 r2 | c'4. c'8 r4 r8 c'8 \bar "|." | \break \mark \markup { \box "1.1.2" } c'8[ c'8] c'16[ c'16 c'16 c'16] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { c'8[ c'8 c'8] } c'8.[ c'16] | R1 \bar "|." | \break \time 3/4 \mark \markup { \box "1.1.3" } c'2. | c'4 c'4 c'4 | c'8 c'4 c'8 c'4 | \break c'8[ c'16 c'16] c'16[ c'16 c'8] \once \override TupletBracket.bracket-visibility = ##f \tuplet 3/2 { c'8[ c'8 c'8] } | R2. \bar "|." | \break \time 2/4 \mark \markup { \box "1.1.4" } c'8[ c'8] c'16[ c'16 c'16 c'16] | c'4. c'8 | c'8.[ c'16] c'8[ c'16 c'16] | c'2 \bar "|." |
+}
+
+cachee = {
+  c'1 c'2. c'4 c'2 c'2 c'4. c'8 c'4 c'8 c'8 c'8 c'8 c'16 c'16 c'16 c'16 \tuplet 3/2 { c'8 c'8 c'8 } c'8. c'16 c'1 c'2. c'4 c'4 c'4 c'8 c'4 c'8 c'4 c'8 c'16 c'16 c'16 c'16 c'8 \tuplet 3/2 { c'8 c'8 c'8 } c'2. c'8 c'8 c'16 c'16 c'16 c'16 c'4. c'8 c'8. c'16 c'8 c'16 c'16 c'2
 }
 
 paroles = \lyricmode {
@@ -40,8 +45,11 @@ paroles = \lyricmode {
   }
   \score {
     <<
-      \new Staff \new Voice = "rythme" \rythme
-      \addlyrics \paroles
+      \new Staff <<
+        \new Voice = "rythme" \rythme
+        \new NullVoice = "cachee" \cachee
+      >>
+      \new Lyrics \lyricsto "cachee" \paroles
     >>
     \layout {
       \context { \Score \remove "Bar_number_engraver" }
