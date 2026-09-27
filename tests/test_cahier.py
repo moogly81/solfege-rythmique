@@ -68,3 +68,16 @@ def test_erreurs_de_structure(texte, message):
 def test_source_dans_les_messages():
     with pytest.raises(CahierError, match=r"^mon.txt, ligne 1 :"):
         parse_cahier("n n\n", source="mon.txt")
+
+
+def test_ligne_de_syllabes():
+    cahier = parse_cahier("# C\n## L\n- d d d d n b\n  = qua- tre dou- bles 2 3\n  r\n")
+    first, second = cahier.chapters[0].lessons[0].exercises[0].lines
+    assert first.syllables == "qua- tre dou- bles 2 3"
+    assert first.syllables_where == "cahier.txt, ligne 4"
+    assert second.syllables is None  # ne compte pas comme une 3e ligne
+
+
+def test_deux_lignes_de_syllabes_refusees():
+    with pytest.raises(CahierError, match="ligne 5 : une seule ligne de syllabes"):
+        parse_cahier("# C\n## L\n- r\n  = 1\n  = 1\n")

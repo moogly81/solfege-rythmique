@@ -30,5 +30,7 @@ STYLE_MSS = f"""<?xml version="1.0" encoding="UTF-8"?>
   <minMeasureWidth>6</minMeasureWidth>
   <lastSystemFillLimit>0</lastSystemFillLimit>
   <genCourtesyTimesig>0</genCourtesyTimesig>
+  <lyricsMinDistance>1.2</lyricsMinDistance>
+  <lyricsDashForce>1</lyricsDashForce>
 </Style></museScore>
 """

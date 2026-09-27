@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from solfege import config
+from solfege.cahier import load_cahier
 from solfege.cli import main
 from solfege.rendu import find_tool
 
@@ -29,7 +30,8 @@ def test_xml_ecrit_une_page_par_lecon(tmp_path):
     (tmp_path / "page_99.musicxml").write_text("ancienne page")
     assert main(["xml", "--cahier", str(CAHIER), "--build", str(tmp_path)]) == 0
     pages = sorted(p.name for p in tmp_path.glob("page_*.musicxml"))
-    assert pages == [f"page_{i:02d}.musicxml" for i in range(1, 26)]
+    n_lessons = sum(1 for _ in load_cahier(CAHIER).lessons())
+    assert pages == [f"page_{i:02d}.musicxml" for i in range(1, n_lessons + 1)]
 
 
 def test_outil_introuvable(monkeypatch):

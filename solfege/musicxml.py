@@ -7,7 +7,20 @@ from .cahier import Chapter, Lesson
 from .rythme import BEAT, DIVISIONS, TOKENS, compute_beams, duration, parse_exercise
 
 
-def note_xml(token: str, beams: dict[int, str], measure_len: int, pos: int) -> str:
+def syllabic(prev: str | None, syll: str) -> str:
+    """Position MusicXML d'une syllabe : « qua- tre » -> begin, end."""
+    continues, continued = syll.endswith("-"), bool(prev and prev.endswith("-"))
+    if continues:
+        return "middle" if continued else "begin"
+    return "end" if continued else "single"
+
+
+def lyric_xml(prev: str | None, syll: str) -> str:
+    text = escape(syll.removesuffix("-") if len(syll) > 1 else syll)
+    return f'<lyric number="1"><syllabic>{syllabic(prev, syll)}</syllabic><text>{text}</text></lyric>'
+
+
+def note_xml(token: str, beams: dict[int, str], measure_len: int, pos: int, lyric: str = "") -> str:
     _, kind, is_rest, dotted = TOKENS[token]
     out = ["<note>"]
     if is_rest:
@@ -31,6 +44,7 @@ def note_xml(token: str, beams: dict[int, str], measure_len: int, pos: int) -> s
     if token == "t" and pos % BEAT in (0, 2 * BEAT // 3):
         kind_tuplet = "start" if pos % BEAT == 0 else "stop"
         out.append(f'<notations><tuplet type="{kind_tuplet}" number="1" bracket="no"/></notations>')
+    out.append(lyric)
     out.append("</note>")
     return "".join(out)
 
@@ -40,8 +54,10 @@ def _measures_xml(lesson: Lesson) -> list[str]:
     for exercise in lesson.exercises:
         beats, parsed = parse_exercise(exercise)
         measure_len = beats * BEAT
-        for line_idx, measures in enumerate(parsed):
+        prev_syll = None
+        for line_idx, (measures, syllables) in enumerate(parsed):
             for m_idx, tokens in enumerate(measures):
+                sylls = iter(syllables[m_idx]) if syllables else None
                 number += 1
                 parts = [f'<measure number="{number}">']
                 if m_idx == 0 and number > 1:
@@ -65,7 +81,11 @@ def _measures_xml(lesson: Lesson) -> list[str]:
                     )
                 pos = 0
                 for t, b in zip(tokens, compute_beams(tokens), strict=True):
-                    parts.append(note_xml(t, b, measure_len, pos))
+                    lyric = ""
+                    if sylls is not None and not TOKENS[t].is_rest:
+                        syll = next(sylls)
+                        lyric, prev_syll = lyric_xml(prev_syll, syll), syll
+                    parts.append(note_xml(t, b, measure_len, pos, lyric))
                     pos += duration(t, measure_len)
                 if line_idx == len(parsed) - 1 and m_idx == len(measures) - 1:
                     parts.append('<barline location="right"><bar-style>light-heavy</bar-style></barline>')

@@ -5,7 +5,7 @@ sont vérifiés par solfege.rythme.
 """
 
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from .config import DEFAULT_TIME
@@ -18,6 +18,8 @@ MAX_LINES_PER_EXERCISE = 2
 class SourceLine:
     text: str
     where: str  # « cahier.txt, ligne 12 »
+    syllables: str | None = None  # ligne « = ... » : syllabes à afficher sous les notes
+    syllables_where: str = ""
 
 
 @dataclass
@@ -110,6 +112,11 @@ def parse_cahier(text: str, source: str = "cahier.txt") -> Cahier:
             number = f"{lesson.number}.{len(lesson.exercises) + 1}"
             exercise = Exercise(number, time_sig, [SourceLine(body, where)])
             lesson.exercises.append(exercise)
+        elif stripped.startswith("=") and line.startswith(" ") and exercise is not None:
+            last = exercise.lines[-1]
+            if last.syllables is not None:
+                raise fail("une seule ligne de syllabes « = » sous chaque ligne de rythme")
+            exercise.lines[-1] = replace(last, syllables=stripped[1:].strip(), syllables_where=where)
         elif line.startswith(" ") and exercise is not None:
             exercise.lines.append(SourceLine(stripped, where))
         else:

@@ -2,7 +2,7 @@ import pytest
 
 from solfege.cahier import parse_cahier
 from solfege.erreurs import CahierError
-from solfege.rythme import BEAT, check, compute_beams, parse_line, parse_time
+from solfege.rythme import BEAT, check, compute_beams, parse_line, parse_syllables, parse_time
 
 
 @pytest.mark.parametrize(("sig", "beats"), [("2/4", 2), ("3/4", 3), ("4/4", 4)])
@@ -96,3 +96,24 @@ def test_ligatures_triolet():
 def test_silence_coupe_la_ligature():
     assert beams("ds c c c") == [{}, {}, {1: "begin"}, {1: "end"}]
     assert BEAT == 12
+
+
+def test_syllabes_une_par_note():
+    assert parse_syllables("1 2 | 1", [["n", "s", "b"], ["r"]], "ici") == [["1", "2"], ["1"]]
+
+
+@pytest.mark.parametrize(
+    ("syllables", "message"),
+    [
+        ("1 2 3", "^ici : 1 mesures de syllabes pour 2 mesures de rythme"),
+        ("1 2 3 | 1 2", r"^ici, mesure 1 \(1 2 3\) : 3 syllabes pour 2 notes"),
+    ],
+)
+def test_syllabes_invalides(syllables, message):
+    with pytest.raises(CahierError, match=message):
+        parse_syllables(syllables, [["n", "s", "b"], ["r"]], "ici")
+
+
+def test_check_verifie_les_syllabes():
+    (error,) = check(parse_cahier("# C\n## L\n- n n b\n  = 1 2\n"))
+    assert error == "cahier.txt, ligne 4 (syllabes de l'exercice 1.1.1), mesure 1 (1 2) : 2 syllabes pour 3 notes"

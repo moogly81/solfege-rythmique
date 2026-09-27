@@ -1,7 +1,7 @@
 // ===========================================================================
 //  CAHIER DE RYTHME : contenu musical, modifiable à la main.
 //  Mode d'emploi complet : NOTATION.md. Règles pédagogiques : PEDAGOGIE.md.
-//  Après modification, lancer : python3 solfege_rythmique.py
+//  Après modification, lancer : python3 -m solfege
 // ---------------------------------------------------------------------------
 //  NOTES                          SILENCES
 //   r   ronde            4 t       p    pause  (toute la mesure)
@@ -20,6 +20,7 @@
 //  Mesure : 4/4              -> chiffrage de la leçon (2/4, 3/4 ou 4/4)
 //  - ...                     -> nouvel exercice (1re ligne)
 //    ...                     -> (décalé de 2 espaces) 2e ligne de l'exercice
+//    = qua- tre dou- bles 2  -> syllabes sous la ligne au-dessus (1 par note)
 //  - 3/4 : ...               -> exercice avec son propre chiffrage
 //  // ...                    -> commentaire, ignoré
 //  Numéros (1.2, 1.2.3...) : automatiques, ne pas les écrire.
@@ -28,7 +29,7 @@
 # Chapitre 1 : Les notes longues
 
 ## La ronde et la pause
-Consigne : Ronde = 4 temps (frappe sur 1). Pause = 4 temps de silence.
+Consigne : Ronde = 4 temps (frappe sur 1). Pause = silence pendant toute la mesure.
 Mesure : 4/4
 
 - r | r | r | r
@@ -86,6 +87,7 @@ Consigne : Compte 1 - 2 - 3 - 4 : la noire dure 1 temps.
 Mesure : 4/4
 
 - n n n n | n n n n | n n n n | n n n n
+  = 1 2 3 4 | 1 2 3 4 | 1 2 3 4 | 1 2 3 4
 - n n b | b n n | r | n n n n
   b b | n n b | p | n n n n
 - n b n | n n b | b dp | r
@@ -123,7 +125,7 @@ Mesure : 4/4
 # Chapitre 3 : Les mesures à 2 et 3 temps
 
 ## La mesure à 3 temps et la blanche pointée
-Consigne : 3/4 : compte 1 - 2 - 3. Le point allonge : blanche pointée = 3 temps.
+Consigne : 3/4 : compte 1 - 2 - 3. Blanche pointée = 3 temps. La pause dure toute la mesure.
 Mesure : 3/4
 
 - b. | b. | b. | b.
@@ -136,17 +138,17 @@ Mesure : 3/4
   n b | s b | n n n | p
 
 ## La mesure à 2 temps
-Consigne : 2/4 : compte 1 - 2. Il y a 2 temps dans chaque mesure.
+Consigne : 2/4 : compte 1 - 2. Ici, la pause (toute la mesure) dure 2 temps.
 Mesure : 2/4
 
 - n n | b | n n | b | n n | b
-- b | n s | n n | dp | n n | b
+- b | n s | n n | p | n n | b
   s n | n n | b | s n | n s | b
 - n n | n s | b | p | n n | b
-- b | s n | n n | b | dp | n n
+- b | s n | n n | b | p | n n
   n s | b | n n | s n | b | b
 - n n | b | s n | n s | n n | b
-  dp | n n | b | n n | n s | b
+  p | n n | b | n n | n s | b
 
 ## Révision : 2, 3 ou 4 temps
 Consigne : Regarde le chiffrage avant de commencer : 2, 3 ou 4 temps par mesure ?
@@ -155,7 +157,7 @@ Mesure : 4/4
 - n n b | r | b n n | b dp
 - 3/4 : b n | n n n | b. | s n n
         n b | b. | n s n | b.
-- 2/4 : n n | b | s n | n n | dp | b
+- 2/4 : n n | b | s n | n n | p | b
 - r | n s n n | b b | p
   n n n n | b. n | n s b | r
 - 3/4 : n n n | b s | n b | p
@@ -164,10 +166,11 @@ Mesure : 4/4
 # Chapitre 4 : Les croches
 
 ## La croche
-Consigne : Compte 1 et 2 et 3 et 4 et : deux croches = 1 temps.
+Consigne : Dis « 1 et 2 et » : deux croches dans un temps.
 Mesure : 4/4
 
-- c c c c c c c c | n n n n | c c c c c c c c | r
+- c c c c c c c c | n n n n | c c c c b
+  = 1 et 2 et 3 et 4 et | 1 2 3 4 | 1 et 2 et 3
 - c c n n n | n c c n n | b c c n | r
   n n c c n | c c n b | n n n c c | b b
 - c c c c b | n c c n n | r | n n c c n
@@ -190,20 +193,20 @@ Mesure : 4/4
         s n n | c c c c n | n s c c | p
 
 ## Le demi-soupir
-Consigne : Le demi-soupir = 1/2 temps de silence (la moitié d'un soupir).
+Consigne : Le demi-soupir se tait pendant une croche. Compte « 1 et 2 et ».
 Mesure : 4/4
 
-- n c ds n n | c ds c ds n n | n n c ds n | c c c ds n s
-- n n s n | n s n s | c c s c c n | n n n s
-  ds c n n n | n ds c n n | ds c ds c n n | n n ds c n
-- c c s c ds n | n ds c s n | c c c c s n | n s n s
-- s n c c n | ds c c c s n | n n ds c s | c c n n s
-  c ds c ds n n | n n s c c | ds c c c n s | n s c c n
-- n n c c s | c c ds c n s | s c c ds c n | n n n s
-  c c n s n | s n c c n | n s c c s | c c c c n s
+- n c ds n n | c ds c ds n n | n n c ds n
+- n n s n | n s n s | c c s c c n
+  ds c n n n | n ds c n n | ds c ds c n n
+- c c s c ds n | n ds c s n | c c c c s n
+- s n c c n | ds c c c s n | n n ds c s
+  c ds c ds n n | n n s c c | ds c c c n s
+- n n c c s | c c ds c n s | s c c ds c n
+  c c n s n | s n c c n | c c c c n s
 
 ## Croches et tous les silences
-Consigne : Pause 4 temps, demi-pause 2 temps, soupir 1 temps, demi-soupir 1/2 temps.
+Consigne : Pause, demi-pause, soupir, demi-soupir : continue de compter pendant les silences.
 Mesure : 4/4
 
 - c c n s n | b dp | c ds c c n n | p
@@ -215,13 +218,27 @@ Mesure : 4/4
 - dp n c c | c c n b | s n ds c n | p
   b s n | c c c c dp | ds c n b | r
 
+## La syncope
+Consigne : Croche - noire - croche : dis « syn-co-pe ». La noire tombe entre deux temps.
+Mesure : 4/4
+
+- c n c n n | c n c b | r
+  = syn- co- pe 3 4 | syn- co- pe 3 | 1
+- n n c n c | c n c c c n | b c n c | r
+- c n c s n | n c n c n | c c c n c n | p
+  b c n c | n s c n c | c n c b | r
+- 3/4 : c n c n | n c n c | c n c n | b.
+        s c n c | c n c s | b n | p
+- 2/4 : c n c | n n | c n c | b | n n | c n c
+
 # Chapitre 5 : La noire pointée
 
 ## La noire pointée
-Consigne : Le point ajoute la moitié : noire pointée = 1 temps et demi, souvent suivie d'une croche (« 1 - 2 et »).
+Consigne : Noire pointée + croche = 2 temps. Dis « 1-2 et » : la croche tombe sur le « et ».
 Mesure : 4/4
 
 - n. c n n | n. c n n | n. c b | r
+  = 1-2 et 3 4 | 1-2 et 3 4 | 1-2 et 3 | 1
 - n n n. c | b n. c | n. c n. c | r
   n. c c c n | n n n. c | b n. c | p
 - n. c b | c c n. c n | n n b | n. c n s
@@ -240,26 +257,39 @@ Mesure : 4/4
         c c n | n. c | s n | n. c | c c c c | b
 - 3/4 : n. c c c | b n | n. c s | p
 - n. c n. c | b. n | n. c b | r
-- 2/4 : n. c | s n | c c n | n. c | dp | b
+- 2/4 : n. c | s n | c c n | n. c | p | b
 - 3/4 : b. | n. c n | c c n. c | b.
+
+## Révision : noire pointée et syncope
+Consigne : « 1-2 et » ou « syn-co-pe » ? Regarde aussi le chiffrage.
+Mesure : 4/4
+
+- n. c n n | c n c b | n. c c n c | r
+- 3/4 : n. c n | c n c n | b n | b.
+        c n c n | n. c s | n n n | p
+- 2/4 : n. c | c n c | s n | n. c | c c n | b
+- n. c c n c | b c n c | n s n. c | b dp
+  c n c n. c | n n. c n | s c n c n | r
+- 3/4 : c c n. c | c n c s | b.
 
 # Chapitre 6 : Les doubles-croches
 
 ## La double-croche
-Consigne : Compte 1-i-et-a : quatre doubles-croches = 1 temps.
+Consigne : Dis « qua-tre dou-bles » : quatre doubles-croches dans un temps.
 Mesure : 4/4
 
-- d d d d n n n | n d d d d n n | n n d d d d n
+- d d d d n n n | n d d d d n n
+  = qua- tre dou- bles 2 3 4 | 1 qua- tre dou- bles 3 4
 - n n n d d d d | d d d d d d d d n n | n n n n
-  d d d d n d d d d n | n d d d d n d d d d | d d d d d d d d d d d d n
+  d d d d n d d d d n | n d d d d n d d d d | d d d d n d d d d n
 - n n d d d d d d d d | d d d d n n n | n d d d d n n
-- d d d d d d d d d d d d d d d d | n n n n | d d d d n d d d d n
+- d d d d n d d d d d d d d | n n n n | d d d d n d d d d n
   n d d d d d d d d n | d d d d n n n | n n n n
 - d d d d n n d d d d | n n d d d d n | d d d d d d d d n n
   n n n d d d d | d d d d n d d d d n | n n n n
 
 ## Doubles-croches et croches
-Consigne : Croches « 1 et », doubles « 1-i-et-a » : écoute la différence !
+Consigne : Croches « 1 et », doubles « qua-tre dou-bles » : écoute la différence !
 Mesure : 4/4
 
 - d d d d n n n | n d d d d n n | n n n d d d d
@@ -271,18 +301,44 @@ Mesure : 4/4
 - d d d d n c c n | c c c c d d d d n | n n n n
   n c c d d d d n | d d d d d d d d n n | c c d d d d c c n
 
-## Une croche et deux doubles
-Consigne : « 1 - et-a » ou « 1-i - et » : une croche vaut deux doubles.
+## Youp la la : une croche et deux doubles
+Consigne : Dis « youp la la » : une croche, puis deux doubles, dans un temps.
 Mesure : 4/4
 
-- c d d c d d n n | c d d c d d c d d c d d | n n b
-- d d c d d c n n | d d c d d c d d c d d c | r
-- c d d n c d d n | n d d c n n | d d c c d d b
-- n n c d d c d d | d d c n n n | c d d n b
-- c d d d d c n n | d d d d c d d n n | c c c d d n n
+- c d d c d d n n | c d d n c d d n
+  = youp la la youp la la 3 4 | youp la la 2 youp la la 4
+- c d d c d d b | n c d d n n | c d d c c n n
+- n n c d d n | c c c d d b | c d d n n n
+  c d d c d d c d d n | d d d d c d d n n | r
+- 3/4 : c d d n n | c c c d d n | b.
+        n c d d c d d | c d d n s | p
+- c d d s n c d d | c d d c d d b | r
+
+## La polka : deux doubles et une croche
+Consigne : Dis « la pol-ka » : deux doubles, puis une croche, dans un temps.
+Mesure : 4/4
+
+- d d c d d c n n | n d d c n n
+  = la pol- ka la pol- ka 3 4 | 1 la pol- ka 3 4
+- d d c d d c b | n d d c d d c n | d d c n b
+- c d d d d c n n | d d c c d d b | n n n n
   d d c c c n n | c d d d d d d n n | n n n n
 - c d d s n c d d | d d c n s d d c | c d d c c b
   n c d d n s | d d c d d c b | r
+- 2/4 : d d c n | c d d d d c | d d c c c | b
+
+## Révision : croches et doubles
+Consigne : « 1 et », « qua-tre dou-bles », « youp la la », « la pol-ka » : lis lentement.
+Mesure : 4/4
+
+- c c d d d d n n | c d d c d d b | d d c n n n
+- d d d d c c b | n c d d d d c n | r
+  c d d n c c n | d d c d d c b | n n n n
+- 3/4 : d d d d n c c | c d d d d c n | b.
+        n c c d d d d | d d c c d d n | p
+- 2/4 : d d d d c c | c d d n | d d c c d d | b
+- c c c c d d d d n | n d d c c d d n | n d d d d b
+  d d c n c d d n | c c d d d d n n | r
 
 ## Doubles-croches et silences
 Consigne : Garde bien le temps pendant les silences.
@@ -298,10 +354,11 @@ Mesure : 4/4
   d d d d c c n s | ds c c ds d d d d n | p
 
 ## La croche pointée et la double
-Consigne : Croche pointée = 3 doubles, puis 1 double : « 1 - - a ». Ça sautille !
+Consigne : Croche pointée + double : dis « sau-te », long puis très court. Ça sautille !
 Mesure : 4/4
 
 - c. d c. d c. d c. d | c. d n c. d n | n n b
+  = sau- te sau- te sau- te sau- te | sau- te 2 sau- te 4 | 1 2 3
 - n c. d n n | c. d c. d b | c c c. d n n
   c. d c c n c. d | n n c. d n | r
 - 2/4 : c. d n | c. d c. d | n. c | c. d n
@@ -310,13 +367,27 @@ Mesure : 4/4
 - c. d s c. d n | d d d d c. d b | p
 - n. c c. d n | c c c. d c. d n | b b
 
+## Révision des doubles-croches
+Consigne : Tous les groupes de doubles, avec des silences : garde bien le temps.
+Mesure : 4/4
+
+- c. d c. d n n | d d d d s c d d n | d d c c. d b
+- 3/4 : c. d n n | d d c d d c n | b.
+        c d d s n | c. d c. d n | p
+- ds c d d d d n s | c. d c c n n | d d d d d d c b
+- 2/4 : c. d d d c | n s | c d d c. d | b
+        d d d d n | c. d n | d d c c c | p
+- n c. d d d c n | c d d n dp | c. d n s n
+  d d d d c. d b | c c c d d c. d n | r
+
 # Chapitre 7 : Le triolet
 
 ## Le triolet
 Consigne : Trois croches dans un temps : « tri-o-let ». Le petit 3 te le montre.
 Mesure : 4/4
 
-- t t t n t t t n | t t t t t t t t t t t t | n n b
+- t t t n t t t n | t t t t t t n n | n n b
+  = tri- o- let 2 tri- o- let 4 | tri- o- let tri- o- let 3 4 | 1 2 3
 - n n t t t n | t t t n n n | t t t t t t b
   b t t t n | n t t t t t t n | r
 - t t t c c t t t c c | n n t t t n | t t t t t t b
@@ -338,6 +409,19 @@ Mesure : 4/4
   t t t c. d c c n | n. c t t t n | r
 - 3/4 : t t t c c n | n. c t t t | b.
 
+## Révision : triolet ou croches ?
+Consigne : « 1 et » ou « tri-o-let » ? Regarde bien le petit 3.
+Mesure : 4/4
+
+- t t t c c t t t c c | n n t t t n | c c t t t b
+- 3/4 : t t t c c n | c c t t t n | b.
+        n t t t c c | t t t n s | p
+- 2/4 : t t t c c | c c t t t | t t t n | b
+- d d d d t t t n n | c. d t t t b | n. c t t t n
+  c n c t t t n | t t t c d d n n | r
+- 3/4 : t t t d d d d n | n. c t t t | b.
+        s t t t c c | c n c n | p
+
 # Chapitre 8 : Révisions générales
 
 ## Révision générale (1)
@@ -349,7 +433,7 @@ Mesure : 4/4
         b n | s n n | c d d c d d n | p
 - d d d d n n n | p | b c c n
   c c ds c b | n d d d d s n | dp n. c
-- 2/4 : n. c | t t t n | c. d c c | b | s n | n n
+- 2/4 : n. c | t t t n | c. d c c | b | c n c | n n
 - n c c d d d d n | t t t n b | n. c s n
   c. d c. d n n | b t t t s | r
 
@@ -363,5 +447,5 @@ Mesure : 4/4
         s n n | d d c c d d n | n ds c s | p
 - n. c c. d n | ds c n t t t n | b dp
   d d d d c. d n s | c c t t t n n | r
-- n c d d n. c | t t t c c b | r
+- n c d d n. c | c n c t t t n | r
 - 2/4 : c. d n | t t t n | d d c c d d | b

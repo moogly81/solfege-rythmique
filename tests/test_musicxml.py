@@ -66,3 +66,19 @@ def test_rythme_faux_refuse():
     chapter = cahier.chapters[0]
     with pytest.raises(CahierError, match="3 temps au lieu de 4"):
         lesson_to_musicxml(chapter, chapter.lessons[0])
+
+
+def test_syllabes_sous_les_notes():
+    cahier = parse_cahier("# C\n## L\n- d d d d s n n\n  = qua- tre dou- bles & 3\n")
+    chapter = cahier.chapters[0]
+    root = ET.fromstring(lesson_to_musicxml(chapter, chapter.lessons[0]).encode())
+    lyrics = [(n.findtext("lyric/syllabic"), n.findtext("lyric/text")) for n in root.iter("note")]
+    assert lyrics == [
+        ("begin", "qua"),
+        ("end", "tre"),
+        ("begin", "dou"),
+        ("end", "bles"),
+        (None, None),  # soupir : pas de syllabe
+        ("single", "&"),
+        ("single", "3"),
+    ]

@@ -5,7 +5,7 @@
 
 from typing import NamedTuple
 
-from .cahier import Cahier, Exercise
+from .cahier import Cahier, Exercise, SourceLine
 from .erreurs import CahierError
 
 DIVISIONS = 12  # divisions MusicXML par noire
@@ -82,11 +82,38 @@ def parse_line(line: str, beats: int, where: str) -> list[Measure]:
     return measures
 
 
-def parse_exercise(exercise: Exercise) -> tuple[int, list[list[Measure]]]:
-    """-> (nombre de temps, mesures de chaque ligne)."""
+def parse_syllables(syllables: str, measures: list[Measure], where: str) -> list[list[str]]:
+    """« qua- tre dou- bles | 1 2 » -> syllabes de chaque mesure, une par note (silences exclus)."""
+    chunks = syllables.split("|")
+    if len(chunks) != len(measures):
+        raise CahierError(f"{where} : {len(chunks)} mesures de syllabes pour {len(measures)} mesures de rythme")
+    result = []
+    for m_idx, (chunk, tokens) in enumerate(zip(chunks, measures, strict=True), start=1):
+        sylls = chunk.split()
+        n_notes = sum(not TOKENS[t].is_rest for t in tokens)
+        if len(sylls) != n_notes:
+            raise CahierError(f"{where}, mesure {m_idx} ({chunk.strip()}) : {len(sylls)} syllabes pour {n_notes} notes")
+        result.append(sylls)
+    return result
+
+
+class ParsedLine(NamedTuple):
+    measures: list[Measure]
+    syllables: list[list[str]] | None
+
+
+def _parse_source_line(line: SourceLine, beats: int, number: str) -> ParsedLine:
+    measures = parse_line(line.text, beats, f"{line.where} (exercice {number})")
+    if line.syllables is None:
+        return ParsedLine(measures, None)
+    where = f"{line.syllables_where} (syllabes de l'exercice {number})"
+    return ParsedLine(measures, parse_syllables(line.syllables, measures, where))
+
+
+def parse_exercise(exercise: Exercise) -> tuple[int, list[ParsedLine]]:
+    """-> (nombre de temps, mesures et syllabes de chaque ligne)."""
     beats = parse_time(exercise.time, exercise.where)
-    lines = [parse_line(line.text, beats, f"{line.where} (exercice {exercise.number})") for line in exercise.lines]
-    return beats, lines
+    return beats, [_parse_source_line(line, beats, exercise.number) for line in exercise.lines]
 
 
 def check(cahier: Cahier) -> list[str]:
@@ -101,7 +128,7 @@ def check(cahier: Cahier) -> list[str]:
                 continue
             for line in exercise.lines:
                 try:
-                    parse_line(line.text, beats, f"{line.where} (exercice {exercise.number})")
+                    _parse_source_line(line, beats, exercise.number)
                 except CahierError as e:
                     errors.append(str(e))
     return errors
