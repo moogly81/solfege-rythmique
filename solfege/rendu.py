@@ -1,10 +1,8 @@
-"""Étape 4 : MusicXML -> PDF (MuseScore 4) puis fusion des pages (qpdf)."""
+"""Étape 4 : .ly -> PDF (LilyPond) puis fusion des pages (qpdf)."""
 
-import json
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 from . import config
@@ -12,7 +10,7 @@ from .erreurs import RenduError
 
 # Variable d'environnement -> (nom lisible, comment l'installer)
 TOOLS = {
-    "MSCORE": ("MuseScore 4", "https://musescore.org, version 4.7.x testée"),
+    "LILYPOND": ("LilyPond", "brew install lilypond (ou apt-get install lilypond)"),
     "QPDF": ("qpdf", "brew install qpdf"),
 }
 
@@ -39,36 +37,25 @@ def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise RenduError(f"Impossible de lancer « {cmd[0]} » : {e.strerror or e}") from None
 
 
-def render_pdfs(xml_paths: list[Path], build_dir: Path) -> list[Path]:
-    """Exporte chaque MusicXML en PDF, en un seul appel MuseScore (job JSON)."""
-    mscore = find_tool("MSCORE", config.MSCORE_CANDIDATES)
+def render_pdfs(ly_paths: list[Path], build_dir: Path) -> list[Path]:
+    """Exporte chaque .ly en PDF, en un seul appel LilyPond (plusieurs fichiers en entrée)."""
+    lilypond = find_tool("LILYPOND", config.LILYPOND_CANDIDATES)
     for old in build_dir.glob("page_*.pdf"):
         old.unlink()  # évite de fusionner des pages d'une version plus longue
-    pdfs = [p.with_suffix(".pdf") for p in xml_paths]
-    jobs = [{"in": str(x.resolve()), "out": str(p.resolve())} for x, p in zip(xml_paths, pdfs, strict=True)]
+    pdfs = [p.with_suffix(".pdf") for p in ly_paths]
 
-    style_file = build_dir / "style.mss"
-    style_file.write_text(config.STYLE_MSS, encoding="utf-8")
-    job_file = build_dir / "job.json"
-    job_file.write_text(json.dumps(jobs, indent=2), encoding="utf-8")
-    # MuseScore 4.7 peut avorter (SIGABRT, "mutex lock failed") dans exit(),
-    # APRÈS avoir écrit les PDF : bug de destruction des statiques côté
-    # MuseScore. On juge donc le résultat sur les fichiers, pas le code retour.
-    log_file = build_dir / "mscore.log"
+    log_file = build_dir / "lilypond.log"
     with log_file.open("w", encoding="utf-8", errors="replace") as log:
-        rc = _run(
-            [mscore, "-S", str(style_file.resolve()), "-j", str(job_file.resolve())],
+        result = _run(
+            [lilypond, "--output", str(build_dir.resolve()), *(str(p.resolve()) for p in ly_paths)],
             stdout=log,
             stderr=subprocess.STDOUT,
-        ).returncode
+        )
+    if result.returncode != 0:
+        raise RenduError(f"LilyPond a échoué (code {result.returncode}) : voir {log_file}")
     missing = [str(p) for p in pdfs if not p.exists()]
     if missing:
-        raise RenduError(f"MuseScore n'a pas produit : {', '.join(missing)} (voir {log_file})")
-    if rc != 0:
-        print(
-            f"Note : MuseScore a quitté avec le code {rc} après export (bug connu à la fermeture, sans impact).",
-            file=sys.stderr,
-        )
+        raise RenduError(f"LilyPond n'a pas produit : {', '.join(missing)} (voir {log_file})")
     return pdfs
 
 

@@ -1,6 +1,6 @@
 # Cahier de solfège rythmique
 
-Ce dépôt génère un cahier d'exercices (33 pages A4) pour apprendre à une enfant de 6 ans à lire des rythmes (notes, silences, mesures) : `cahier.txt` → MusicXML → PDF (MuseScore 4).
+Ce dépôt génère un cahier d'exercices (33 pages A4) pour apprendre à une enfant de 6 ans à lire des rythmes (notes, silences, mesures) : `cahier.txt` → LilyPond → PDF.
 
 - Modifier le contenu : `cahier.txt`, format dans [NOTATION.md](NOTATION.md), règles dans [PEDAGOGIE.md](PEDAGOGIE.md).
 - Générer : `python3 -m solfege` (vérifier seulement : `python3 -m solfege check`).
@@ -11,8 +11,8 @@ Ce dépôt génère un cahier d'exercices (33 pages A4) pour apprendre à une en
 | Outil | Pour | Installation |
 |---|---|---|
 | Python ≥ 3.11 | tout | `brew install uv` puis `uv venv && uv pip install -e ".[dev]"` |
-| MuseScore 4 (testé 4.7.x) | générer le PDF | [musescore.org](https://musescore.org) ; ou `MSCORE=/chemin/mscore` |
+| LilyPond | générer le PDF | `brew install lilypond` ; ou `LILYPOND=/chemin/lilypond` |
 | qpdf | fusionner les pages | `brew install qpdf` ; ou `QPDF=/chemin/qpdf` |
 | poppler (`pdftoppm`) | contrôle visuel seulement | `brew install poppler` |
 
-Le code n'a aucune dépendance Python à l'exécution ; `pytest` et `ruff` servent au développement. La CI (GitHub Actions) n'a pas MuseScore : elle vérifie le code et `cahier.txt`, pas le PDF.
+Le code n'a aucune dépendance Python à l'exécution ; `pytest` et `ruff` servent au développement. La CI (GitHub Actions) installe LilyPond et qpdf : elle vérifie aussi le rendu PDF, pas seulement le code et `cahier.txt`.

@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "solfege"
 version = "0.3.0"
-description = "Cahier de lecture rythmique pour enfant : cahier.txt -> MusicXML -> PDF (MuseScore 4)"
+description = "Cahier de lecture rythmique pour enfant : cahier.txt -> LilyPond -> PDF"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []  # bibliothèque standard seulement ; outils externes : MuseScore 4 (4.7.x testé), qpdf ; pdftoppm pour vérifier
+dependencies = []  # bibliothèque standard seulement ; outils externes : LilyPond, qpdf ; pdftoppm pour vérifier
 
 [project.optional-dependencies]
 dev = [
@@ -25,7 +25,7 @@ packages = ["solfege"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
-markers = ["rendu: nécessite MuseScore 4 et qpdf (ignoré s'ils sont absents)"]
+markers = ["rendu: nécessite LilyPond et qpdf (ignoré s'ils sont absents)"]
 
 [tool.ruff]
 line-length = 120
@@ -36,5 +36,5 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 ignore = ["RUF001", "RUF002", "RUF003"]  # guillemets « » et apostrophes françaises voulus
 
 [tool.ruff.lint.per-file-ignores]
-"solfege/musicxml.py" = ["E501"]  # gabarit MusicXML : lignes longues voulues (sortie identique)
+"solfege/lilypond.py" = ["E501"]  # gabarit LilyPond : lignes longues voulues (sortie identique)
 "solfege/largeurs.py" = ["E501"]  # tables de largeurs de glyphes, une police par ligne
