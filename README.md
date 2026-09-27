@@ -1,6 +1,6 @@
 # Cahier de solfège rythmique
 
-Cahier de lecture rythmique (33 pages A4) pour une enfant de 6 ans : `cahier.txt` → MusicXML → PDF (MuseScore 4).
+Ce dépôt génère un cahier d'exercices (33 pages A4) pour apprendre à une enfant de 6 ans à lire des rythmes (notes, silences, mesures) : `cahier.txt` → MusicXML → PDF (MuseScore 4).
 
 - Modifier le contenu : `cahier.txt`, format dans [NOTATION.md](NOTATION.md), règles dans [PEDAGOGIE.md](PEDAGOGIE.md).
 - Générer : `python3 -m solfege` (vérifier seulement : `python3 -m solfege check`).
