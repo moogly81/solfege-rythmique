@@ -1,0 +1,26 @@
+name: Release
+
+# git tag v1 && git push origin v1 : génère le PDF et le publie dans une Release
+# (publique, permanente ; lien fixe : releases/latest/download/cahier_rythme.pdf).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write  # créer la Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      - uses: astral-sh/setup-uv@v7
+      - run: sudo apt-get update && sudo apt-get install -y lilypond
+      - run: uv pip install --system -e .
+      - run: python -m solfege  # code 2 si une leçon déborde : pas de Release
+      - run: gh release create "$GITHUB_REF_NAME" cahier_rythme.pdf --title "Cahier de rythme $GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
