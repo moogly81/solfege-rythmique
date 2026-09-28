@@ -15,3 +15,7 @@ Ce dépôt génère un cahier d'exercices (36 pages A4) pour apprendre à une en
 | poppler (`pdftoppm`) | contrôle visuel seulement | `brew install poppler` |
 
 Le code n'a aucune dépendance Python à l'exécution ; `pytest` et `ruff` servent au développement. La CI (GitHub Actions) installe LilyPond : elle vérifie aussi le rendu PDF, pas seulement le code et `cahier.txt`, et publie le PDF de chaque exécution en artefact `cahier_rythme` (onglet Actions).
+
+## Publier une version
+
+`git tag v1 && git push origin v1` : la CI génère le PDF et crée la Release. Lien fixe vers la dernière version (public, sans compte GitHub) : <https://github.com/moogly81/solfege-rythmique/releases/latest/download/cahier_rythme.pdf>.

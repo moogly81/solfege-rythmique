@@ -171,6 +171,10 @@ Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages 
   - `sudo apt-get install -y lilypond` avant l'installation Python : les tests `rendu` (dont `test_pdf_complet`) s'exécutent réellement ;
   - `uv pip install --system -e ".[dev]"`, `ruff check .`, `ruff format --check .`, `python -m solfege check`, `pytest`, `python -m solfege` (le cahier complet : échoue avec un code 2 si une leçon déborde) ;
   - puis, sur le job Python `"3.x"` seulement (un nom d'artefact est unique par exécution), `actions/upload-artifact` publie l'artefact `cahier_rythme` (`cahier_rythme.pdf` + `build/lilypond.log`, `if-no-files-found: error`) : le PDF de chaque push/PR se télécharge dans l'onglet Actions. Pas d'artefact si `python -m solfege` échoue (PDF refusé). Le PDF reste aussi versionné (téléchargeable sans compte GitHub, contrairement aux artefacts, qui expirent).
+- Release `.github/workflows/release.yml` :
+  - sur push d'un tag `v*`, `permissions: contents: write` ;
+  - mêmes actions que la CI, Python `"3.x"`, LilyPond via `apt-get`, `uv pip install --system -e .` (pas l'extra `dev`), `python -m solfege` (un débordement, code 2, bloque la Release) ;
+  - `gh release create "$GITHUB_REF_NAME" cahier_rythme.pdf --title "Cahier de rythme <tag>" --generate-notes` (`GH_TOKEN: ${{ github.token }}`) : PDF public, permanent, sans compte GitHub, lien fixe `https://github.com/moogly81/solfege-rythmique/releases/latest/download/cahier_rythme.pdf`. L'artefact CI sert à relire le PDF d'une PR, la Release à partager une version finie.
 - `.github/dependabot.yml` : `pip` et `github-actions`, hebdomadaire, un groupe par écosystème.
 - `.gitignore` :
   - `build/`, `__pycache__/`, `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `*.egg-info/`, `.claude/`, `.DS_Store` ;
