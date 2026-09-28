@@ -195,7 +195,11 @@ paroles = \\lyricmode {{
       \\new Lyrics \\lyricsto "cachee" \\paroles
     >>
     \\layout {{
-      \\context {{ \\Score \\remove "Bar_number_engraver" }}
+      \\context {{
+        \\Score
+        \\remove "Bar_number_engraver"
+        \\override TimeSignature.break-visibility = #end-of-line-invisible
+      }}
     }}
   }}
 }}
