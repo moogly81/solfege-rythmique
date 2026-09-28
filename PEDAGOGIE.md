@@ -51,7 +51,7 @@ Le 1er exercice d'une leçon qui introduit une valeur, un silence, un groupe ou 
 |---|---|
 | ronde | « ron-de lon-gue » |
 | blanche | « blan-che » |
-| blanche pointée | « blan-che lon-gue » |
+| blanche pointée | « blan-che-point » |
 | noire | « noir » |
 | 2 croches | « deux-croch » |
 | croche seule (à côté d'un demi-soupir) | « ta » |
