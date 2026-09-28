@@ -28,6 +28,14 @@ Pour écrire les rythmes eux-mêmes, voir `NOTATION.md`.
 - **Jamais une page entière d'une seule valeur** (que des rondes, que des noires…) : ce n'est pas pédagogique.
 - Une leçon qui introduit une nouvelle valeur : **le 1er exercice la fait découvrir**, puis les suivants la **mélangent avec les valeurs déjà connues**.
 - Chaque nouvelle notion (note, silence, groupe, chiffrage) a **sa propre leçon**, suivie de leçons de **révision**.
+- Une notion difficile (contretemps, syncope, triolet, croche pointée + double) a **deux leçons** : la découverte, puis une leçon d'**entraînement** (sans syllabes, 8 lignes) avant la notion suivante. Le triolet a déjà la sienne (« triolets, croches et noires »).
+- **Dans chaque leçon, du plus simple au plus difficile** :
+  1. découverte (avec les syllabes si la leçon en a) ;
+  2. la notion une fois par mesure, entourée de valeurs longues déjà connues ;
+  3. puis mélangée avec les valeurs connues ;
+  4. pour finir, des enchaînements plus denses : la notion plusieurs fois par mesure, des croches ou des doubles autour, des silences, un autre chiffrage.
+
+  Les révisions suivent le même ordre (chiffrage de la leçon d'abord, mélanges à la fin). Le programme vérifie que le 2e exercice n'est pas plus chargé que le dernier (nombre de notes et de silences par temps).
 - On n'utilise jamais une valeur avant la leçon qui l'introduit.
 - Les silences font partie de la progression au même titre que les notes : pause, demi-pause, soupir, demi-soupir.
 - La pause = silence pendant **toute la mesure** (4, 3 ou 2 temps selon le chiffrage). En 2/4, une mesure de silence s'écrit avec une pause, pas une demi-pause.
@@ -69,15 +77,15 @@ Les leçons qui introduisent une notion difficile (contretemps, syncope, croche 
 - Groupes : 2 croches, contretemps (demi-soupir + croche), 4 doubles, croche + 2 doubles, 2 doubles + croche, croche pointée + double, triolet, syncope (croche, noire, croche). Ordre : contretemps, puis syncope, puis triolet, puis doubles-croches (le triolet, 3 sons égaux dans un temps, est plus facile à entendre que les groupes de doubles).
 - Chiffrages : 4/4, 3/4, 2/4. Les révisions mélangent les chiffrages. La consigne demande alors de regarder le chiffrage avant de commencer.
 
-## Progression actuelle (8 chapitres, 33 pages)
+## Progression actuelle (8 chapitres, 36 pages)
 
 1. **Les notes longues** : ronde et pause · blanche · demi-pause · révision
 2. **Le temps** : noire · soupir · révision
 3. **Les mesures à 2 et 3 temps** : mesure à 3 temps · blanche pointée · mesure à 2 temps · révision 2, 3 ou 4 temps
-4. **Les croches** : croche · croches avec tout · demi-soupir · croches et silences · contretemps
-5. **La noire pointée et la syncope** : noire pointée + croche · syncope · noire pointée en 3/4 et 2/4 · révision noire pointée et syncope
+4. **Les croches** : croche · croches avec tout · demi-soupir · croches et silences · contretemps · entraînement contretemps
+5. **La noire pointée et la syncope** : noire pointée + croche · syncope · entraînement syncope · noire pointée en 3/4 et 2/4 · révision noire pointée et syncope
 6. **Le triolet** : triolet · triolets, croches et noires · révision triolet ou croches
-7. **Les doubles-croches** : double · doubles et croches · croche + 2 doubles (youp la la) · 2 doubles + croche (la polka) · révision croches et doubles · doubles et silences · croche pointée + double · révision des doubles
+7. **Les doubles-croches** : double · doubles et croches · croche + 2 doubles (youp la la) · 2 doubles + croche (la polka) · révision croches et doubles · doubles et silences · croche pointée + double · entraînement croche pointée + double · révision des doubles
 8. **Révisions générales** : révision générale 1 (sans silence) · révision générale 2 (tout, chiffrages mélangés)
 
 Leçons avec syllabes (1er exercice) : 1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 3.2, 3.3, 4.1, 4.3, 4.5, 5.1, 5.2, 6.1, 7.1, 7.3, 7.4, 7.7.

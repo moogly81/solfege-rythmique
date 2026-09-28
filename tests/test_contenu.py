@@ -11,7 +11,7 @@ import re
 import pytest
 
 from solfege.cahier import load_cahier
-from solfege.rythme import TOKENS, check
+from solfege.rythme import TOKENS, check, parse_exercise
 
 from .conftest import CAHIER_PATH, PEDAGOGIE_PATH
 
@@ -63,6 +63,23 @@ def test_consigne_presente(chapter, lesson):
 def test_jamais_une_seule_valeur(chapter, lesson):
     # 1.1 n'a que la ronde comme note : la pause compte comme 2e valeur
     assert len(symbols(lesson)) >= 2, f"une seule valeur : {symbols(lesson)}"
+
+
+def signes_par_temps(exercise) -> float:
+    """Densité de lecture : notes et silences (une pause compte pour 1) par temps."""
+    beats, lines = parse_exercise(exercise)
+    measures = [m for line in lines for m in line.measures]
+    return sum(len(m) for m in measures) / (len(measures) * beats)
+
+
+@pytest.mark.parametrize(("chapter", "lesson"), LESSONS, ids=IDS)
+def test_complexite_croissante(chapter, lesson):
+    # du plus simple au plus difficile : le 2e exercice n'est pas plus chargé que le dernier
+    second, last = lesson.exercises[1], lesson.exercises[-1]
+    d_second, d_last = signes_par_temps(second), signes_par_temps(last)
+    assert d_second <= d_last, (
+        f"{second.number} ({d_second:.2f} signes par temps) plus chargé que {last.number} ({d_last:.2f})"
+    )
 
 
 @pytest.mark.parametrize(("chapter", "lesson"), LESSONS, ids=IDS)

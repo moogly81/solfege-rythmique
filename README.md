@@ -1,6 +1,6 @@
 # Cahier de solfège rythmique
 
-Ce dépôt génère un cahier d'exercices (33 pages A4) pour apprendre à une enfant de 6 ans à lire des rythmes (notes, silences, mesures) : `cahier.txt` → LilyPond → PDF.
+Ce dépôt génère un cahier d'exercices (36 pages A4) pour apprendre à une enfant de 6 ans à lire des rythmes (notes, silences, mesures) : `cahier.txt` → LilyPond → PDF.
 
 - Modifier le contenu : `cahier.txt`, format dans [NOTATION.md](NOTATION.md), règles dans [PEDAGOGIE.md](PEDAGOGIE.md).
 - Générer : `python3 -m solfege` (vérifier seulement : `python3 -m solfege check`).

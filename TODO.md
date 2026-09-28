@@ -12,7 +12,7 @@ Pistes issues des revues du 2026-09-27, non réalisées parce qu'elles demandent
 
 ## Progression (`cahier.txt` + PEDAGOGIE, sans code)
 
-- [ ] **Complexité croissante dans chaque leçon** (surtout à partir des chapitres 3 et 4) : aujourd'hui les exercices d'une leçon se ressemblent souvent. Ils devraient aller du plus simple au plus difficile (nouvelle valeur isolée, puis mélangée, puis enchaînements plus denses). Comme la difficulté monte, il faut aussi **assez d'exercices** pour assimiler chaque notion : plus de leçons (par ex. découverte + entraînement), ou plus d'exercices par leçon (mais la règle actuelle est 4 à 6 exercices sur une page A4). Mettre à jour PEDAGOGIE.md (règles et « Progression actuelle ») en même temps.
+- [x] **Complexité croissante dans chaque leçon** (surtout à partir des chapitres 3 et 4) : aujourd'hui les exercices d'une leçon se ressemblent souvent. Ils devraient aller du plus simple au plus difficile (nouvelle valeur isolée, puis mélangée, puis enchaînements plus denses). Comme la difficulté monte, il faut aussi **assez d'exercices** pour assimiler chaque notion : plus de leçons (par ex. découverte + entraînement), ou plus d'exercices par leçon (mais la règle actuelle est 4 à 6 exercices sur une page A4). Mettre à jour PEDAGOGIE.md (règles et « Progression actuelle ») en même temps. Fait : exercices réordonnés du simple au dense, une leçon d'entraînement après contretemps, syncope et croche pointée + double (36 pages), règle dans PEDAGOGIE.md, vérifiée par `test_complexite_croissante`.
 
 ## Outil
 
