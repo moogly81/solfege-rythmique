@@ -7,7 +7,7 @@ BUILD_DIR = Path("build")
 OUTPUT_PDF = Path("cahier_rythme.pdf")
 DEFAULT_TIME = "4/4"
 
-MSCORE_CANDIDATES = ["/Applications/MuseScore 4.app/Contents/MacOS/mscore", "mscore", "musescore"]
+LILYPOND_CANDIDATES = ["lilypond", "/opt/homebrew/bin/lilypond"]
 QPDF_CANDIDATES = ["qpdf", "/opt/homebrew/bin/qpdf"]
 
 # Taille de la gravure : hauteur (mm) d'un "espace de portée" x4.
@@ -21,20 +21,3 @@ TOP_SYSTEM_DISTANCE = 150
 CHAPTER_PT, TITLE_PT, INSTRUCTION_PT = 12, 22, 13
 PAGE_W_MM, PAGE_H_MM = 210, 297
 MARGIN_MM = 15
-
-# Style MuseScore appliqué à toutes les pages (clés = réglages MuseScore 4).
-# Distances en "espaces" (sp) ; 1 sp = STAFF_SIZE_MM / 4.
-STYLE_MSS = f"""<?xml version="1.0" encoding="UTF-8"?>
-<museScore version="4.70"><Style>
-  <spatium>{STAFF_SIZE_MM / 4}</spatium>
-  <showMeasureNumber>0</showMeasureNumber>
-  <minSystemDistance>9</minSystemDistance>
-  <maxSystemDistance>30</maxSystemDistance>
-  <enableVerticalSpread>1</enableVerticalSpread>
-  <minMeasureWidth>6</minMeasureWidth>
-  <lastSystemFillLimit>0</lastSystemFillLimit>
-  <genCourtesyTimesig>0</genCourtesyTimesig>
-  <lyricsMinDistance>1.2</lyricsMinDistance>
-  <lyricsDashForce>1</lyricsDashForce>
-</Style></museScore>
-"""

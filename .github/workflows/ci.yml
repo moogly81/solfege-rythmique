@@ -20,8 +20,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v7
+      - run: sudo apt-get update && sudo apt-get install -y lilypond qpdf
       - run: uv pip install --system -e ".[dev]"
       - run: ruff check .
       - run: ruff format --check .
       - run: python -m solfege check
-      - run: pytest  # tests de rendu ignorés : pas de MuseScore sur le runner
+      - run: pytest  # LilyPond et qpdf installés : les tests "rendu" tournent aussi
+      - run: python -m solfege  # cahier.txt complet : code 2 si une leçon déborde

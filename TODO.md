@@ -12,6 +12,6 @@ Pistes issues des revues du 2026-09-27, non réalisées parce qu'elles demandent
 
 ## Outil
 
-- [ ] **MuseScore → LilyPond** : LilyPond (`brew install lilypond`, disponible sur les runners CI) donnerait un rendu déterministe et testable en CI, sans le SIGABRT à la fermeture ni la dépendance à une application graphique. Coût : réécrire `musicxml.py` en générateur `.ly` et revalider tout le rendu (ligatures, triolets, syllabes, une ligne, 1 page par leçon).
-- [ ] **Un seul MusicXML pour tout le cahier** (`<print new-page="yes"/>` par leçon) au lieu de 33 fichiers + `job.json` + fusion `qpdf` : à essayer, MuseScore importe mal les `<credit page="N">` au-delà de la page 1.
+- [x] **MuseScore → LilyPond** : fait sur la branche `outil/lilypond` (`solfege/lilypond.py` remplace `musicxml.py`, `rendu.py` appelle `lilypond` au lieu de `mscore`). CI installe LilyPond via `apt-get` et exécute désormais les tests `rendu` (avant ignorés, faute de MuseScore). Rendu vérifié visuellement (33 pages du vrai `cahier.txt`, `pdftoppm`) après correction du piton des notes (`c'`, centré sur la ligne), des syllabes numériques et de l'affichage des numéros de mesure.
+- [ ] **Un seul fichier LilyPond pour tout le cahier** (`\pageBreak` par leçon, dans un seul `\book`) au lieu de 33 fichiers `.ly` + fusion `qpdf` : à essayer maintenant que le rendu passe par LilyPond (l'ancien blocage MuseScore sur les `<credit page="N">` au-delà de la page 1 ne s'applique plus).
 - [ ] **Générer les artefacts** : publier `cahier_rythme.pdf` comme artefact de build CI (`actions/upload-artifact`) plutôt que (ou en plus de) le garder versionné dans le dépôt.

@@ -34,32 +34,32 @@ def test_erreur_ne_cree_aucun_fichier(tmp_path):
     bad = tmp_path / "cahier.txt"
     bad.write_text("# C\n## L\n- n n n\n", encoding="utf-8")
     build = tmp_path / "build"
-    assert main(["xml", "--cahier", str(bad), "--build", str(build)]) == 1
+    assert main(["ly", "--cahier", str(bad), "--build", str(build)]) == 1
     assert not build.exists()
 
 
-def test_xml_ecrit_une_page_par_lecon(tmp_path):
-    (tmp_path / "page_99.musicxml").write_text("ancienne page")
-    assert main(["xml", "--cahier", str(CAHIER_PATH), "--build", str(tmp_path)]) == 0
-    pages = sorted(p.name for p in tmp_path.glob("page_*.musicxml"))
+def test_ly_ecrit_une_page_par_lecon(tmp_path):
+    (tmp_path / "page_99.ly").write_text("ancienne page")
+    assert main(["ly", "--cahier", str(CAHIER_PATH), "--build", str(tmp_path)]) == 0
+    pages = sorted(p.name for p in tmp_path.glob("page_*.ly"))
     n_lessons = sum(1 for _ in load_cahier(CAHIER_PATH).lessons())
-    assert pages == [f"page_{i:02d}.musicxml" for i in range(1, n_lessons + 1)]
+    assert pages == [f"page_{i:02d}.ly" for i in range(1, n_lessons + 1)]
 
 
 # --- find_tool ---------------------------------------------------------------
 
 
 def test_outil_introuvable(monkeypatch):
-    monkeypatch.delenv("MSCORE", raising=False)
-    with pytest.raises(RenduError, match=r"^Outil introuvable \(MSCORE\) : MuseScore 4\. Installez-le"):
-        find_tool("MSCORE", ["/nulle/part/mscore"])
+    monkeypatch.delenv("LILYPOND", raising=False)
+    with pytest.raises(RenduError, match=r"^Outil introuvable \(LILYPOND\) : LilyPond\. Installez-le"):
+        find_tool("LILYPOND", ["/nulle/part/lilypond"])
 
 
 def test_variable_d_environnement_valide(monkeypatch, tmp_path):
-    tool = tmp_path / "mon-mscore"
+    tool = tmp_path / "mon-lilypond"
     tool.touch()
-    monkeypatch.setenv("MSCORE", str(tool))
-    assert find_tool("MSCORE", ["/nulle/part/mscore"]) == str(tool)
+    monkeypatch.setenv("LILYPOND", str(tool))
+    assert find_tool("LILYPOND", ["/nulle/part/lilypond"]) == str(tool)
 
 
 def test_variable_d_environnement_fausse_refusee(monkeypatch):
@@ -68,16 +68,16 @@ def test_variable_d_environnement_fausse_refusee(monkeypatch):
         find_tool("QPDF", ["qpdf"])
 
 
-# --- rendu sans MuseScore (subprocess simulé) --------------------------------
+# --- rendu sans LilyPond (subprocess simulé) ---------------------------------
 
 
 @pytest.fixture
 def fake_tools(monkeypatch, tmp_path):
-    """MuseScore et qpdf remplacés par des fichiers vides ; subprocess.run enregistré."""
+    """LilyPond et qpdf remplacés par des fichiers vides ; subprocess.run enregistré."""
     calls: list[list[str]] = []
-    for name in ("mscore", "qpdf"):
+    for name in ("lilypond", "qpdf"):
         (tmp_path / name).touch()
-    monkeypatch.setenv("MSCORE", str(tmp_path / "mscore"))
+    monkeypatch.setenv("LILYPOND", str(tmp_path / "lilypond"))
     monkeypatch.setenv("QPDF", str(tmp_path / "qpdf"))
 
     class Fake:
@@ -88,9 +88,11 @@ def fake_tools(monkeypatch, tmp_path):
 
     def run(cmd, **kwargs):
         calls.append(cmd)
-        if cmd[0].endswith("mscore") and Fake.writes_pdfs:
-            for job in __import__("json").loads(Path(cmd[cmd.index("-j") + 1]).read_text()):
-                Path(job["out"]).write_bytes(b"%PDF-fake")
+        if cmd[0].endswith("lilypond") and Fake.writes_pdfs:
+            out_idx = cmd.index("--output") + 1
+            build = Path(cmd[out_idx])
+            for ly in cmd[out_idx + 1 :]:
+                (build / Path(ly).with_suffix(".pdf").name).write_bytes(b"%PDF-fake")
         return subprocess.CompletedProcess(cmd, Fake.returncode, Fake.stdout, Fake.stderr)
 
     monkeypatch.setattr(rendu.subprocess, "run", run)
@@ -102,34 +104,33 @@ def test_render_pdfs_un_seul_appel_et_nettoyage(fake_tools, tmp_path):
     build = tmp_path / "b"
     build.mkdir()
     (build / "page_09.pdf").write_bytes(b"perime")
-    xmls = [build / "page_01.musicxml", build / "page_02.musicxml"]
-    for x in xmls:
-        x.write_text("<x/>")
-    pdfs = render_pdfs(xmls, build)
+    lys = [build / "page_01.ly", build / "page_02.ly"]
+    for ly in lys:
+        ly.write_text("% vide")
+    pdfs = render_pdfs(lys, build)
     assert pdfs == [build / "page_01.pdf", build / "page_02.pdf"]
     assert all(p.exists() for p in pdfs)
     assert not (build / "page_09.pdf").exists()
     (cmd,) = fake_tools.calls
-    assert cmd[1:4] == ["-S", str((build / "style.mss").resolve()), "-j"]
-    assert Path(cmd[4]).is_absolute()
-    assert (build / "style.mss").read_text(encoding="utf-8") == config.STYLE_MSS
+    assert cmd[1] == "--output"
+    assert Path(cmd[2]).is_absolute()
+    assert cmd[3:] == [str(lys[0].resolve()), str(lys[1].resolve())]
 
 
-def test_render_pdfs_code_retour_non_nul_tolere(fake_tools, tmp_path, capsys):
-    fake_tools.returncode = -6  # SIGABRT à la fermeture : les PDF sont là
-    xml = tmp_path / "page_01.musicxml"
-    xml.write_text("<x/>")
-    render_pdfs([xml], tmp_path)
-    out, err = capsys.readouterr()
-    assert out == "" and "code -6" in err and "bug connu" in err
+def test_render_pdfs_code_retour_non_nul_echoue(fake_tools, tmp_path):
+    fake_tools.returncode = 1
+    ly = tmp_path / "page_01.ly"
+    ly.write_text("% vide")
+    with pytest.raises(RenduError, match=r"LilyPond a échoué \(code 1\) : voir .*lilypond\.log"):
+        render_pdfs([ly], tmp_path)
 
 
 def test_render_pdfs_pdf_manquant(fake_tools, tmp_path):
     fake_tools.writes_pdfs = False
-    xml = tmp_path / "page_01.musicxml"
-    xml.write_text("<x/>")
-    with pytest.raises(RenduError, match=r"MuseScore n'a pas produit : .*page_01\.pdf \(voir .*mscore\.log\)"):
-        render_pdfs([xml], tmp_path)
+    ly = tmp_path / "page_01.ly"
+    ly.write_text("% vide")
+    with pytest.raises(RenduError, match=r"LilyPond n'a pas produit : .*page_01\.pdf \(voir .*lilypond\.log\)"):
+        render_pdfs([ly], tmp_path)
 
 
 def test_merge_pdfs_echec_sans_trace(fake_tools, tmp_path):
@@ -183,8 +184,8 @@ def _available(env, candidates):
 
 @pytest.mark.rendu
 @pytest.mark.skipif(
-    not (_available("MSCORE", config.MSCORE_CANDIDATES) and _available("QPDF", config.QPDF_CANDIDATES)),
-    reason="MuseScore 4 ou qpdf absent",
+    not (_available("LILYPOND", config.LILYPOND_CANDIDATES) and _available("QPDF", config.QPDF_CANDIDATES)),
+    reason="LilyPond ou qpdf absent",
 )
 def test_pdf_complet(tmp_path):
     cahier = tmp_path / "cahier.txt"

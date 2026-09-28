@@ -191,13 +191,10 @@ def check(cahier: Cahier) -> list[str]:
     return errors
 
 
-def compute_beams(tokens: Measure) -> list[dict[int, str]]:
-    """Pour chaque note de la mesure : {niveau: valeur} de ligatures MusicXML
-    (begin/continue/end/forward hook/backward hook).
-
-    Groupes = par temps : un nouveau groupe commence sur chaque temps ; une valeur
-    qui chevauche deux temps (« c c. d ») reste dans le groupe où elle a commencé."""
-    beams: list[dict[int, str]] = [{} for _ in tokens]
+def beam_groups(tokens: Measure) -> list[list[int]]:
+    """Indices des notes ligaturables ensemble, groupées par temps : un nouveau groupe
+    commence sur chaque temps ; une valeur qui chevauche deux temps (« c c. d ») reste
+    dans le groupe où elle a commencé. Ne renvoie que les groupes d'au moins 2 notes."""
     groups, current, pos = [], [], 0
     for i, t in enumerate(tokens):
         tok = TOKENS[t]
@@ -211,8 +208,14 @@ def compute_beams(tokens: Measure) -> list[dict[int, str]]:
         pos += tok.duration or 0
     if len(current) > 1:
         groups.append(current)
+    return groups
 
-    for g in groups:
+
+def compute_beams(tokens: Measure) -> list[dict[int, str]]:
+    """Pour chaque note de la mesure : {niveau: valeur} de ligatures MusicXML
+    (begin/continue/end/forward hook/backward hook)."""
+    beams: list[dict[int, str]] = [{} for _ in tokens]
+    for g in beam_groups(tokens):
         for k, i in enumerate(g):
             beams[i][1] = "begin" if k == 0 else "end" if k == len(g) - 1 else "continue"
         # 2e barre : sur les suites de doubles-croches consécutives
