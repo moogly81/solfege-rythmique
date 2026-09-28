@@ -2,20 +2,21 @@
 
 python3 -m solfege          tout (PDF)
 python3 -m solfege check    vérifie cahier.txt seulement (rapide, sans LilyPond)
-python3 -m solfege ly       vérifie + écrit les .ly dans build/
+python3 -m solfege ly       vérifie + écrit build/cahier.ly
 
 Codes de retour : 0 ok ; 1 erreur (message sur stderr) ; 2 PDF produit mais une leçon déborde.
 """
 
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
 from . import config
 from .cahier import Cahier, load_cahier
 from .erreurs import CahierError, SolfegeError
-from .lilypond import lesson_to_lilypond
-from .rendu import merge_pdfs, overflow_warnings, render_pdfs
+from .lilypond import cahier_to_lilypond
+from .rendu import overflow_warnings, render_pdf
 from .rythme import check
 
 
@@ -27,17 +28,13 @@ def load_and_check(path: Path) -> Cahier:
     return cahier
 
 
-def write_ly(cahier: Cahier, build_dir: Path) -> list[Path]:
+def write_ly(cahier: Cahier, build_dir: Path) -> Path:
     build_dir.mkdir(parents=True, exist_ok=True)
     for old in build_dir.glob("page_*.ly"):
-        old.unlink()
-    paths = []
-    for page_no, (chapter, lesson) in enumerate(cahier.lessons(), start=1):
-        stem = f"page_{page_no:02d}"
-        path = build_dir / f"{stem}.ly"
-        path.write_text(lesson_to_lilypond(chapter, lesson, page_stem=stem), encoding="utf-8")
-        paths.append(path)
-    return paths
+        old.unlink()  # restes de l'ancien rendu page par page
+    path = build_dir / "cahier.ly"
+    path.write_text(cahier_to_lilypond(cahier), encoding="utf-8")
+    return path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -56,16 +53,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.step == "check":
             print(f"{args.cahier} : OK ({len(cahier.chapters)} chapitres, {n_lessons} leçons)")
             return 0
-        ly_paths = write_ly(cahier, args.build)
+        ly_path = write_ly(cahier, args.build)
         if args.step == "ly":
-            print(f"LilyPond écrits dans {args.build}/ ({len(ly_paths)} pages)")
+            print(f"LilyPond écrit : {ly_path} ({n_lessons} pages)")
             return 0
-        pdfs = render_pdfs(ly_paths, args.build)
-        warnings = overflow_warnings(pdfs, [lesson.number for _, lesson in cahier.lessons()])
+        pdf, pages = render_pdf(ly_path, args.build)
+        warnings = overflow_warnings(pages, [lesson.number for _, lesson in cahier.lessons()])
         for w in warnings:
             print(w, file=sys.stderr)
-        merge_pdfs(pdfs, args.output)
-        print(f"PDF généré : {args.output} ({len(ly_paths)} pages)")
+        shutil.copyfile(pdf, args.output)
+        print(f"PDF généré : {args.output} ({sum(pages.values())} pages)")
         return 2 if warnings else 0
     except SolfegeError as e:
         print(e, file=sys.stderr)

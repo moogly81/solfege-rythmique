@@ -8,19 +8,17 @@ le même rendu. Pour mettre à jour la référence après un changement voulu du
 import pytest
 
 from solfege.cahier import load_cahier
-from solfege.lilypond import lesson_to_lilypond
+from solfege.lilypond import cahier_to_lilypond
 
 from .conftest import GOLDEN_DIR
 
 
 def test_exemple_identique(request):
-    cahier = load_cahier(GOLDEN_DIR / "exemple.txt")
-    for page_no, (chapter, lesson) in enumerate(cahier.lessons(), start=1):
-        expected = GOLDEN_DIR / f"exemple_{page_no:02d}.ly"
-        actual = lesson_to_lilypond(chapter, lesson)
-        if request.config.getoption("--regenerer-golden"):
-            expected.write_text(actual, encoding="utf-8")
-            continue
-        if not expected.exists():
-            pytest.fail(f"{expected} manquant : lancer pytest --regenerer-golden")
-        assert actual == expected.read_text(encoding="utf-8"), f"{expected.name} a changé (rendu modifié ?)"
+    expected = GOLDEN_DIR / "exemple.ly"
+    actual = cahier_to_lilypond(load_cahier(GOLDEN_DIR / "exemple.txt"))
+    if request.config.getoption("--regenerer-golden"):
+        expected.write_text(actual, encoding="utf-8")
+        return
+    if not expected.exists():
+        pytest.fail(f"{expected} manquant : lancer pytest --regenerer-golden")
+    assert actual == expected.read_text(encoding="utf-8"), f"{expected.name} a changé (rendu modifié ?)"

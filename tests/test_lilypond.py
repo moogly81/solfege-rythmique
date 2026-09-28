@@ -4,7 +4,7 @@ import pytest
 
 from solfege.cahier import parse_cahier
 from solfege.erreurs import CahierError
-from solfege.lilypond import lesson_to_lilypond
+from solfege.lilypond import cahier_to_lilypond, lesson_to_lilypond
 
 CAHIER = """\
 # Chapitre 1 : Tout <mélangé> & co
@@ -18,9 +18,8 @@ Mesure : 3/4
 
 
 def ly_of(text: str) -> str:
-    """.ly (texte) de la 1re leçon d'un cahier donné en texte."""
-    chapter = parse_cahier(text).chapters[0]
-    return lesson_to_lilypond(chapter, chapter.lessons[0])
+    """.ly (texte) d'un cahier donné en texte (ici, une seule leçon)."""
+    return cahier_to_lilypond(parse_cahier(text))
 
 
 def rythme_block(ly: str) -> str:
@@ -122,15 +121,15 @@ def test_taille_de_portee():
     assert float(taille) == pytest.approx(8.5 * 72 / 25.4, abs=0.01)
 
 
-def test_nom_de_sortie_force():
-    """page_stem force \\bookOutputName : nécessaire pour LilyPond 2.24 (Ubuntu 24.04, CI), qui
-    déduit mal le nom du 2e fichier (et suivants) compilé dans le même appel (\"lilypond
-    --output DIR a.ly b.ly\"), sans quoi le PDF du 2e fichier n'est jamais écrit."""
-    chapter = parse_cahier("# C\n## L\n- n n n n\n").chapters[0]
-    ly_sans = lesson_to_lilypond(chapter, chapter.lessons[0])
-    ly_avec = lesson_to_lilypond(chapter, chapter.lessons[0], page_stem="page_02")
-    assert r"\bookOutputName" not in ly_sans
-    assert '\\bookOutputName "page_02"' in ly_avec
+def test_une_page_par_lecon_dans_un_seul_document():
+    """Un seul .ly pour tout le cahier : réglages communs une fois, puis un \\bookpart (nouvelle page)
+    par leçon, qui écrit son nombre de pages dans le journal (détection des débordements)."""
+    ly = ly_of("# C\n## L\n- n n n n\n## M\n- r\n# D\n## N\n- b b\n")
+    assert ly.count("\\version") == ly.count("set-paper-size") == ly.count("tagline") == 1
+    assert ly.count("\\bookpart {") == 3
+    assert re.findall(r'ly:message "solfege-pages (\S+) ~a"', ly) == ["1.1", "1.2", "2.1"]
+    assert ly.count("rythme = {") == 3  # variables redéfinies avant chaque page
+    assert ly.count("{") == ly.count("}")
 
 
 def test_rythme_faux_refuse():

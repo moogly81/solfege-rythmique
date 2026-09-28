@@ -11,8 +11,8 @@ Transformer `cahier.txt` (format : `NOTATION.md`) en `cahier_rythme.pdf` : une l
 Pipeline, une étape par module, chacune testable seule :
 
 ```
-cahier.txt → modèle (dataclasses) → vérification rythmique → 1 .ly par leçon (build/page_NN.ly)
-          → PDF par page (LilyPond CLI, un seul appel, plusieurs fichiers) → fusion qpdf → cahier_rythme.pdf
+cahier.txt → modèle (dataclasses) → vérification rythmique → un seul .ly, un \bookpart par leçon (build/cahier.ly)
+          → PDF (LilyPond CLI, un seul appel) → build/cahier.pdf, copié en cahier_rythme.pdf
 ```
 
 Historique : jusqu'à la branche `outil/lilypond`, la gravure passait par MusicXML + MuseScore 4 (CLI). Abandonné pour deux raisons : MuseScore 4.7 fait un SIGABRT connu à la fermeture après export (il fallait tolérer un code retour non nul), et MuseScore n'étant pas installable sur les runners CI, le rendu PDF n'y était jamais vérifié (tests marqués `rendu` toujours ignorés). LilyPond est un outil en ligne de commande pur, installable via `apt-get` en CI comme via `brew` en local : le rendu est désormais déterministe et testé en CI.
@@ -21,11 +21,10 @@ Historique : jusqu'à la branche `outil/lilypond`, la gravure passait par MusicX
 
 - Python ≥ 3.11, **bibliothèque standard uniquement** à l'exécution.
 - Outils externes à l'exécution :
-  - LilyPond (`lilypond` dans le PATH, ou `/opt/homebrew/bin/lilypond`) ;
-  - `qpdf` (PATH ou `/opt/homebrew/bin/qpdf`).
-  - Surcharge : variables d'env `LILYPOND`, `QPDF`. Si la variable est définie mais pointe sur un chemin inexistant : erreur explicite, pas de repli silencieux.
+  - LilyPond (`lilypond` dans le PATH, ou `/opt/homebrew/bin/lilypond`), seul outil requis ;
+  - Surcharge : variable d'env `LILYPOND`. Si la variable est définie mais pointe sur un chemin inexistant : erreur explicite, pas de repli silencieux.
 - Outils de vérification seulement (pas requis pour générer) : `pdftoppm` (poppler) pour le contrôle visuel.
-- Installation (macOS) : `brew install lilypond qpdf poppler uv`, puis `uv venv && uv pip install -e ".[dev]"`. Le `.venv/` du dépôt doit contenir `pytest` et `ruff`.
+- Installation (macOS) : `brew install lilypond poppler uv`, puis `uv venv && uv pip install -e ".[dev]"`. Le `.venv/` du dépôt doit contenir `pytest` et `ruff`.
 - Code, messages, docs : **français** (messages avec accents et guillemets « »).
 - Erreurs utilisateur = exceptions `SolfegeError` (sous-classes `CahierError`, `RenduError`) ; seul le CLI les transforme en message sur stderr + code 1, sans trace Python.
 
@@ -36,10 +35,10 @@ Historique : jusqu'à la branche `outil/lilypond`, la gravure passait par MusicX
 | `erreurs.py` | `SolfegeError`, `CahierError`, `RenduError` |
 | `config.py` | chemins par défaut (`cahier.txt`, `build/`, `cahier_rythme.pdf`), chiffrage par défaut `4/4`, candidats d'outils, mise en page |
 | `cahier.py` | texte → `Cahier(source, chapters)` ⊃ `Chapter(number, title, lessons)` ⊃ `Lesson(number "N.M", title, where, instruction, time, exercises)` ⊃ `Exercise(number "N.M.K", time, lines: [SourceLine(text, where, syllables, syllables_where)])`. Structure seulement |
-| `rythme.py` | symboles, `parse_time`, `parse_line`, `parse_syllables`, `parse_exercise`, `check_header`, `check(cahier) -> list[str]`, `beam_groups`, `compute_beams` |
+| `rythme.py` | symboles, `parse_time`, `parse_line`, `parse_syllables`, `parse_exercise`, `check_header`, `check(cahier) -> list[str]`, `beam_groups` |
 | `largeurs.py` | largeurs des glyphes de la police Edwin (Roman/Bold/Italic, millièmes d'em), `largeur_mm(texte, police, pt)`, `LARGEUR_UTILE_MM` |
-| `lilypond.py` | `lesson_to_lilypond(chapter, lesson) -> str`, fonction pure |
-| `rendu.py` | `find_tool`, `render_pdfs` (LilyPond), `page_count`, `overflow_warnings`, `merge_pdfs` (qpdf) |
+| `lilypond.py` | `cahier_to_lilypond(cahier) -> str` (document entier), `lesson_to_lilypond(chapter, lesson) -> str` (une page), fonctions pures |
+| `rendu.py` | `find_tool`, `render_pdf` (LilyPond), `overflow_warnings` |
 | `cli.py` | `main(argv) -> int` |
 | `__main__.py` | `python -m solfege` |
 
@@ -66,11 +65,11 @@ Suit `NOTATION.md` § 3.
 
 ### 3.2 Rythme (`rythme.py`)
 
-- 12 divisions MusicXML par noire (divisible par 3 et par 4).
-- Symbole → (durée en divisions, type MusicXML, silence ?, pointé ?) :
-  - `r` 48 whole, `b.` 36 half pointée, `b` 24 half, `n.` 18 quarter pointée, `n` 12 quarter ;
-  - `c.` 9 eighth pointée, `c` 6 eighth, `t` 4 eighth (triolet), `d` 3 16th ;
-  - silences : `p` = mesure entière (whole), `dp` 24 half, `s` 12 quarter, `ds` 6 eighth.
+- 12 divisions par noire (divisible par 3 et par 4) : sert à vérifier la durée des mesures.
+- Symbole → (durée en divisions, durée LilyPond, silence ?) :
+  - `r` 48 `1`, `b.` 36 `2.`, `b` 24 `2`, `n.` 18 `4.`, `n` 12 `4` ;
+  - `c.` 9 `8.`, `c` 6 `8`, `t` 4 `8` (triolet), `d` 3 `16` ;
+  - silences : `p` = mesure entière (durée LilyPond selon le chiffrage, voir § 3.3), `dp` 24 `2`, `s` 12 `4`, `ds` 6 `8`.
 - Chiffrages acceptés : `N/4` uniquement, 1 ≤ N ≤ 12 (« chiffrage invalide « 0/4 » (de 1 à 12 temps par mesure) »).
 - Vérifications de `NOTATION.md` § 4 :
   - mesure vide (« mesure 2 : mesure vide (deux barres « | » à la suite ?) ») ;
@@ -87,12 +86,14 @@ Suit `NOTATION.md` § 3.
 - Ligatures, groupées par temps (`beam_groups(tokens) -> list[list[int]]`, les indices de chaque groupe d'au moins 2 notes) :
   - un groupe commence sur une note ligaturable (croche, double, `t`, non-silence) posée **sur un temps** ou après un élément non ligaturable ; il continue tant que les notes ligaturables suivantes ne tombent pas sur un temps. Une valeur qui chevauche deux temps (`c c. d`) garde donc la suite dans son groupe ;
   - `c n c`, `n. c`, `c s c` : aucune ligature (aucun groupe).
-  - `compute_beams(tokens) -> list[dict[int, str]]` (consommé par aucun module de rendu depuis le passage à LilyPond, gardé et testé pour documenter le détail MusicXML-like begin/continue/end/hook — voir `test_rythme.py`) : niveau 1 sur tout le groupe (`beam_groups`), niveau 2 sur les suites de doubles ; une double isolée dans un groupe = `forward hook`, ou `backward hook` si elle est la dernière du groupe. `lilypond.py` n'utilise que `beam_groups` : il pose `[`/`]` aux extrémités du groupe et laisse LilyPond calculer lui-même les barres partielles des doubles isolées.
+  - `lilypond.py` pose `[`/`]` aux extrémités de chaque groupe et laisse LilyPond calculer lui-même les barres des doubles (y compris les barres partielles des doubles isolées).
 
 ### 3.3 LilyPond (`lilypond.py`)
 
 Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages du vrai `cahier.txt`) ; ne pas les changer sans revérifier le rendu.
 
+- **Un seul document pour tout le cahier** (`cahier_to_lilypond`) : préambule commun une fois (`\version`, taille de portée, `\paper`, `\header`, `\layout`), puis pour chaque leçon (`lesson_to_lilypond`) ses variables `rythme`, `cachee`, `paroles`, **redéfinies** avant son `\bookpart` (LilyPond copie leur valeur à la lecture ; les noms d'identifiants LilyPond n'acceptent pas de chiffres, d'où la redéfinition plutôt que `rythme1`, `rythme2`…). Les `\bookpart` de premier niveau forment un livre implicite ; chacun commence une nouvelle page. Remplace l'ancien rendu « 1 .ly par leçon + fusion qpdf » (hérité de MuseScore, qui ne savait pas placer un en-tête au-delà de la page 1) : rendu identique au pixel près sur les 33 pages (`pdftoppm -r 50`), qpdf n'est plus nécessaire.
+- **Nombre de pages par leçon** : chaque `\bookpart` définit dans son `\paper` `#(define (page-post-process layout pages) (ly:message "solfege-pages N.M ~a" (length pages)))` ; LilyPond l'appelle après la coupure en pages de ce `\bookpart` et écrit « solfege-pages 4.3 2 » dans son journal (`PAGES_MARKER`). C'est la détection des débordements (`page-post-process` existe depuis LilyPond 2.12).
 - **Portée** : `\new Staff` avec `\override Staff.StaffSymbol.line-count = #1` (1 seule ligne) et `\clef "percussion"`, posés une fois en tête du bloc musical (pas de répétition par mesure, contrairement à MusicXML). Pas d'armure à masquer : do majeur (0 altération) ne dessine rien.
 - **Piton fixe** : chaque note (jamais les silences) s'écrit avec le même piton `c'` (do du milieu), seule la durée varie — vérifié par rendu réel, mesure au pixel près : avec `\clef "percussion"` sur une portée réduite à 1 ligne, `c'` est le seul piton dont la tête de note est centrée sur cette ligne (moitié au-dessus, moitié en dessous). `b` (sans marque d'octave, donc si 3) tombe presque entièrement sous la ligne (la note ne fait qu'effleurer la ligne par le haut) ; `c`, `d` et les pitons plus graves tombent nettement dessous, avec des lignes supplémentaires.
 - **Hampes** : `\override Stem.direction = #UP` global (pas de cas par note ; les rondes n'ont de toute façon pas de hampe).
@@ -113,24 +114,22 @@ Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages 
   - `_` → espace, texte entre guillemets pour rester une seule syllabe (`ron-de_lon-gue` → `"ron-de lon-gue"`) ;
   - un mot tout en chiffres (compte de temps « 1 », « 2 »...) est aussi mis entre guillemets : sans ça, LilyPond lit un nombre isolé comme la durée du mot précédent, pas comme un nouveau mot (vu en rendu réel : « 1 2 3 » cassait la compilation) ;
   - échappement : `\` et `"` protégés (`_escape`), le reste (accents, « », `<>&`) passe tel quel (LilyPond n'est pas du XML).
-- **En-tête** : un seul `\markup \fill-line { \center-column { ... } }` avant le `\score`, 3 lignes en tailles absolues `\abs-fontsize` (12/22/13 pt, `config.py`) : chapitre (romain), titre (gras), consigne (italique). `rythme.check_header`/`largeurs.py` (métrique de la police Edwin de MuseScore) restent la vérification de largeur ; la police par défaut de LilyPond n'est pas Edwin, mais le rendu réel des 33 pages ne montre aucun débordement d'en-tête.
-- **Pas de numéro de mesure, pas de pied de page LilyPond** : `\layout { \context { \Score \remove "Bar_number_engraver" } }` (sinon un numéro apparaît sur chaque système) et `\header { tagline = ##f }` (sinon « LilyPond vX.Y.Z » s'affiche en bas de la dernière page).
+- **En-tête** : dans chaque `\bookpart`, un seul `\markup \fill-line { \center-column { ... } }` avant le `\score`, 3 lignes en tailles absolues `\abs-fontsize` (12/22/13 pt, `config.py`) : chapitre (romain), titre (gras), consigne (italique). `rythme.check_header`/`largeurs.py` (métrique de la police Edwin de MuseScore) restent la vérification de largeur ; la police par défaut de LilyPond n'est pas Edwin, mais le rendu réel des 33 pages ne montre aucun débordement d'en-tête.
+- **Pas de numéro de mesure, pas de pied de page LilyPond** (préambule, commun à toutes les pages) : `\layout { \context { \Score \remove "Bar_number_engraver" } }` (sinon un numéro apparaît sur chaque système) et `\header { tagline = ##f }` (sinon « LilyPond vX.Y.Z » s'affiche en bas de la dernière page).
 - **Pas de chiffrage de courtoisie en fin de ligne** : `\override TimeSignature.break-visibility = #end-of-line-invisible` dans le même `\layout`. Par défaut, LilyPond affiche un chiffrage qui change juste avant un `\break` deux fois : une fois en petit à la fin du système qui se termine, une fois normalement au début du suivant. Chaque exercice étant indépendant (pas de lien musical entre deux exercices consécutifs, contrairement à une partition continue), ce rappel n'a pas de sens ici — repéré en rendu réel (leçon 4.2, chiffrage 2/4 de l'exercice suivant affiché en trop à la fin de la ligne de l'exercice 4.2.3).
 - **Mise en page** (`\paper`, valeurs dans `config.py`) :
   - A4, marges 15 mm, `indent = 0`, `print-page-number = ##f` ;
   - taille de portée : `#(set-global-staff-size STAFF_SIZE_MM * 72/25.4)` (mm → points) ;
-  - `system-system-spacing.basic-distance` = `SYSTEM_DISTANCE / 10`, `markup-system-spacing.basic-distance` = `TOP_SYSTEM_DISTANCE / 10` (les anciennes valeurs MusicXML étaient en dixièmes de mm avec 40 dixièmes = 1 hauteur de portée = même unité que les « espaces de portée » LilyPond, d'où la division par 10).
+  - `system-system-spacing.basic-distance` = `SYSTEM_DISTANCE`, `markup-system-spacing.basic-distance` = `TOP_SYSTEM_DISTANCE`, en espaces de portée LilyPond (14 et 15).
 
 ### 3.4 Rendu (`rendu.py`)
 
-- `find_tool(env_var, candidats)` : variable d'env si définie (erreur si son chemin n'existe pas : « qpdf introuvable : la variable QPDF pointe sur « … », qui n'existe pas. »), sinon 1er candidat existant (`Path.exists()` ou `shutil.which`), sinon « Outil introuvable (LILYPOND) : LilyPond. Installez-le (…) ou définissez LILYPOND. ».
+- `find_tool(env_var, candidats)` : variable d'env si définie (erreur si son chemin n'existe pas : « LilyPond introuvable : la variable LILYPOND pointe sur « … », qui n'existe pas. »), sinon 1er candidat existant (`Path.exists()` ou `shutil.which`), sinon « Outil introuvable (LILYPOND) : LilyPond. Installez-le (…) ou définissez LILYPOND. ».
 - Tout `subprocess.run` passe par un enrobage qui transforme `OSError` (outil non exécutable, permission) en `RenduError` « Impossible de lancer « … » : … ». Jamais de trace Python pour l'utilisateur.
-- Un seul appel pour toutes les pages : `lilypond --output <build_dir absolu> <page_01.ly absolu> <page_02.ly absolu> …`. La sortie (stdout + stderr) va dans `build/lilypond.log`. Tous les fichiers sont écrits/lus en UTF-8 explicitement.
-- **Bug connu (LilyPond 2.24.3, Ubuntu 24.04/CI, pas reproduit en 2.26 local)** : dans un appel avec plusieurs fichiers d'entrée, LilyPond déduit correctement le nom de sortie du 1er fichier (`page_01.pdf`) mais pas des suivants (`Converting to `.pdf'...`, nom vide : `page_02.pdf` n'est jamais écrit, code retour quand même 0). Corrigé en forçant le nom de sortie de chaque leçon avec `\bookOutputName "page_NN"` dans le `.ly` généré (`lesson_to_lilypond(..., page_stem="page_02")`, `cli.write_ly`) plutôt que de compter sur la déduction automatique par fichier.
-- Supprimer les anciens `build/page_*.pdf` avant l'export, pour ne jamais fusionner de pages périmées.
+- `render_pdf(ly, build_dir) -> (pdf, pages)` : un seul appel, `lilypond --output <build_dir absolu> <build/cahier.ly absolu>`, qui écrit `build/cahier.pdf`. La sortie (stdout + stderr) va dans `build/lilypond.log`. Tous les fichiers sont écrits/lus en UTF-8 explicitement. `pages` = `{"4.3": 2, …}`, lu dans le journal (lignes `solfege-pages N.M K`, voir § 3.3).
+- Supprimer l'ancien `build/cahier.pdf` (et les `build/page_*.pdf` de l'ancien rendu page par page) avant l'export, pour ne jamais livrer un PDF périmé. (L'ancien bug LilyPond 2.24.3 sur le nom de sortie du 2e fichier d'un appel à plusieurs entrées, contourné par `\bookOutputName`, ne se pose plus : une seule entrée.)
 - Code retour ≠ 0 → `RenduError` « LilyPond a échoué (code …) : voir build/lilypond.log » (LilyPond n'a pas d'équivalent du SIGABRT de MuseScore à la fermeture : un code non nul est une vraie erreur, pas de tolérance particulière). PDF manquant malgré un code 0 : `RenduError` « LilyPond n'a pas produit : … (voir build/lilypond.log) ».
-- **Débordement** : `page_count(pdf)` via `qpdf --show-npages` ; `overflow_warnings(pdfs, numéros)` renvoie « Attention : la leçon 4.3 déborde (2 pages au lieu de 1) : raccourcir des lignes. » pour chaque PDF de page ≠ 1 page.
-- Fusion : `qpdf --empty --pages build/page_*.pdf -- cahier_rythme.pdf` ; code retour ≠ 0 → `RenduError` avec le stderr de qpdf.
+- **Débordement** : `overflow_warnings(pages, numéros)` renvoie « Attention : la leçon 4.3 déborde (2 pages au lieu de 1) : raccourcir des lignes. » pour chaque leçon de ≠ 1 page ; une leçon absente du journal → `RenduError` « LilyPond n'a pas indiqué le nombre de pages de la leçon 4.3 ».
 
 ### 3.5 CLI (`cli.py`)
 
@@ -139,11 +138,11 @@ Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages 
 - Enchaînement :
   1. lecture ;
   2. `check`, qui lève toutes les erreurs jointes par `\n` ;
-  3. écriture de `build/page_NN.ly`, après suppression des anciens ;
-  4. rendu, avertissements de débordement sur stderr, puis fusion.
+  3. écriture de `build/cahier.ly` (et suppression des `build/page_*.ly` de l'ancien rendu) ;
+  4. rendu, avertissements de débordement sur stderr, puis copie de `build/cahier.pdf` vers `--output`.
 - Messages de fin (stdout) :
   - `cahier.txt : OK (8 chapitres, 33 leçons)` ;
-  - `LilyPond écrits dans build/ (33 pages)` ;
+  - `LilyPond écrit : build/cahier.ly (33 pages)` ;
   - `PDF généré : cahier_rythme.pdf (33 pages)`.
   - (nombres = ceux du cahier lu, jamais codés en dur).
 - Codes de retour : 0 ; 1 = erreur (`SolfegeError` sur stderr, aucun fichier créé si l'erreur est dans le cahier) ; 2 = PDF produit mais au moins une leçon déborde.
@@ -156,10 +155,10 @@ Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages 
   - pytest : `testpaths = ["tests"]`, `addopts = "-ra --strict-markers"`, marqueur `rendu`.
 - Tests `tests/` (paquet : `__init__.py` ; `conftest.py` = chemins `ROOT`, `CAHIER_PATH`, `PEDAGOGIE_PATH`, `GOLDEN_DIR` + option `--regenerer-golden`) :
   - `test_cahier.py` : structure, numérotation, chiffrage par exercice, chaque erreur de structure avec son message exact, BOM, indentation (espaces, tabulation), `Consigne`/`Mesure` sans « : », `Mesure` après un exercice ;
-  - `test_rythme.py` : largeur de l'en-tête (titre et consigne trop larges, calibrage 161–166 mm), durées, chiffrages (`0/4`, `-3/4`, `13/4`, `6/8`), syllabes (compte, mesures, `(chut)`, syllabe vide, parenthèses), chaque erreur de rythme (en 2/4, 3/4, 4/4), mesure vide, triolets, `check` qui renvoie plusieurs erreurs (messages complets), `beam_groups`/`compute_beams` (`c c c c`, `c d d`, `d d c`, `c. d`, `t t t`, `c c. d`, silence qui coupe un groupe, `c n c`/`n. c` sans ligature) ;
-  - `test_lilypond.py` : accolades équilibrées, sauts de système (`\break`, jamais avant la 1re ligne), repères et chiffrages (`\box`, `\time`, réémis seulement au changement), portée (ligne unique, clé, hampes, `\autoBeamOff` : réglages globaux uniques), piton fixe des notes, ligatures (crochets `[ ]` sur les bons indices), double barre (`\bar "|."`), pause de mesure (`R…`), triolet (`\tuplet 3/2`, crochet masqué), en-tête (3 tailles `\abs-fontsize`), mise en page A4, taille de portée calculée, syllabes (continuation `--`, espace entre guillemets, silence chuchoté, silence sans syllabe = `\skip`), piste invisible `cachee` (`NullVoice` + `\lyricsto`, aucun silence dedans) et syllabe chuchotée sous une pause (`R`, pas seulement un silence ordinaire) ;
-  - `test_cli.py` : `check` et `ly` sur un cahier temporaire, code 1 et message sans trace, aucun fichier créé en cas d'erreur, nettoyage des anciens fichiers ; `find_tool` (absent, variable valide, variable fausse) ; **rendu simulé** (`monkeypatch` de `subprocess.run`) : un seul appel LilyPond avec chemins absolus, suppression des anciens PDF, code retour ≠ 0 → `RenduError`, PDF manquant, échec qpdf, avertissement de débordement, `OSError` ; `test_pdf_complet` marqué `rendu`, ignoré si LilyPond ou qpdf manque (via `find_tool`), 2 leçons, vérifie 1 page par PDF de page et 2 pages au total ;
-  - `test_golden.py` : `tests/golden/exemple.txt` (tous les symboles, 3 chiffrages, syllabes, `(chut)`, triolet, 2 leçons) doit donner **octet pour octet** `tests/golden/exemple_NN.ly` (versionnés). C'est la référence de « comportement identique » lors d'un refactor ou d'une régénération ; `pytest tests/test_golden.py --regenerer-golden` la met à jour après un changement de rendu voulu ;
+  - `test_rythme.py` : largeur de l'en-tête (titre et consigne trop larges, calibrage 161–166 mm), durées, chiffrages (`0/4`, `-3/4`, `13/4`, `6/8`), syllabes (compte, mesures, `(chut)`, syllabe vide, parenthèses), chaque erreur de rythme (en 2/4, 3/4, 4/4), mesure vide, triolets, `check` qui renvoie plusieurs erreurs (messages complets), `beam_groups` (`c c c c`, `c d d`, `d d c`, `c. d`, `t t t`, `c c. d`, silence qui coupe un groupe, `c n c`/`n. c` sans ligature) ;
+  - `test_lilypond.py` : accolades équilibrées, sauts de système (`\break`, jamais avant la 1re ligne), repères et chiffrages (`\box`, `\time`, réémis seulement au changement), portée (ligne unique, clé, hampes, `\autoBeamOff` : réglages globaux uniques), piton fixe des notes, ligatures (crochets `[ ]` sur les bons indices), double barre (`\bar "|."`), pause de mesure (`R…`), triolet (`\tuplet 3/2`, crochet masqué), en-tête (3 tailles `\abs-fontsize`), mise en page A4, taille de portée calculée, syllabes (continuation `--`, espace entre guillemets, silence chuchoté, silence sans syllabe = `\skip`), piste invisible `cachee` (`NullVoice` + `\lyricsto`, aucun silence dedans), syllabe chuchotée sous une pause (`R`, pas seulement un silence ordinaire), document unique (préambule une fois, un `\bookpart` et un `solfege-pages N.M` par leçon) ;
+  - `test_cli.py` : `check` et `ly` sur un cahier temporaire, code 1 et message sans trace, aucun fichier créé en cas d'erreur, nettoyage des anciens fichiers ; `find_tool` (absent, variable valide, variable fausse) ; **rendu simulé** (`monkeypatch` de `subprocess.run`, le faux LilyPond écrit le PDF et les lignes `solfege-pages`) : un seul appel LilyPond avec chemins absolus, pages lues dans le journal, suppression des anciens PDF, code retour ≠ 0 → `RenduError`, PDF manquant, avertissement de débordement, leçon absente du journal, `OSError` ; tests marqués `rendu`, ignorés si LilyPond manque (via `find_tool`) : `test_pdf_complet` (2 leçons → 2 pages, `/Count` du PDF 1.4) et `test_pdf_debordement_reel` (une leçon de 24 lignes → code 2, « la leçon 1.2 déborde », seule) ;
+  - `test_golden.py` : `tests/golden/exemple.txt` (tous les symboles, 3 chiffrages, syllabes, `(chut)`, triolet, 2 leçons) doit donner **octet pour octet** `tests/golden/exemple.ly` (versionné). C'est la référence de « comportement identique » lors d'un refactor ou d'une régénération ; `pytest tests/test_golden.py --regenerer-golden` la met à jour après un changement de rendu voulu ;
   - `test_contenu.py` : le vrai `cahier.txt` passe `check` ; il suit la « Progression actuelle » de PEDAGOGIE.md, **lue dans le fichier** ; syllabes sur le 1er exercice des leçons listées dans « Leçons avec syllabes » **et seulement celles-là** ; 4 à 6 exercices et 6 à 10 lignes par leçon, consigne présente et ≤ 95 caractères, au moins 2 symboles distincts par leçon, pas plus de 8 `d` d'affilée (barres comprises). Un motif introuvable donne un message clair, pas une `AttributeError`.
 - Grammaire exacte des lignes de PEDAGOGIE.md lues par `test_contenu.py` (regex, `re.MULTILINE`) :
   - `^## Progression actuelle \((\d+) chapitres, (\d+) pages\)$` ;
@@ -169,7 +168,7 @@ Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages 
   - sur push `main` et PR, `permissions: contents: read` ;
   - matrice Python `"3.11"` et `"3.x"` (dernière stable) ;
   - `actions/checkout@v7`, `actions/setup-python@v7`, `astral-sh/setup-uv@v7` (tags majeurs, mis à jour par Dependabot) ;
-  - `sudo apt-get install -y lilypond qpdf` avant l'installation Python : LilyPond et qpdf disponibles, donc les tests `rendu` (dont `test_pdf_complet`) s'exécutent réellement ;
+  - `sudo apt-get install -y lilypond` avant l'installation Python : les tests `rendu` (dont `test_pdf_complet`) s'exécutent réellement ;
   - `uv pip install --system -e ".[dev]"`, `ruff check .`, `ruff format --check .`, `python -m solfege check`, `pytest`, `python -m solfege` (le cahier complet : échoue avec un code 2 si une leçon déborde).
 - `.github/dependabot.yml` : `pip` et `github-actions`, hebdomadaire, un groupe par écosystème.
 - `.gitignore` :
@@ -186,7 +185,7 @@ Choix validés par un rendu réel (LilyPond 2.26, contrôle visuel des 33 pages 
 ## 6. Critères d'acceptation
 
 1. `ruff check . && ruff format --check . && pytest` : tout vert.
-2. `python3 -m solfege` rend le code 0 (pas d'avertissement « déborde ») et produit `cahier_rythme.pdf` d'autant de pages que la « Progression actuelle » de PEDAGOGIE.md (une par leçon), avec exactement 1 page par `build/page_NN.pdf` (`qpdf --show-npages`). Sinon la leçon déborde : ajuster la mise en page, **pas** le contenu.
+2. `python3 -m solfege` rend le code 0 (pas d'avertissement « déborde ») et produit `cahier_rythme.pdf` d'autant de pages que la « Progression actuelle » de PEDAGOGIE.md (une par leçon), avec exactement 1 page par leçon (lignes `solfege-pages N.M 1` de `build/lilypond.log`). Sinon la leçon déborde : ajuster la mise en page, **pas** le contenu.
 3. Contrôle visuel : `pdftoppm -png -r 50 -f N -l N cahier_rythme.pdf "$TMPDIR/x"`, sur au moins la page 1, la dernière et chaque leçon de « Leçons avec syllabes » (PEDAGOGIE.md). Vérifier :
    - en-tête sur 3 lignes, cadres N.M.K, une ligne par exercice ;
    - notes **sur** la ligne, silences corrects ;

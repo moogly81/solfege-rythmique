@@ -32,7 +32,7 @@ qu'ils passent. La CI a LilyPond : le PDF s'y vérifie aussi, en plus du local.
 Termine par un rapport : fichiers créés, résultats des tests, pages vérifiées.
 ```
 
-Prérequis sur la machine : LilyPond, `qpdf`, `pdftoppm` (poppler), un `.venv/` avec `pytest` et `ruff` (voir README.md, « Installation »).
+Prérequis sur la machine : LilyPond, `pdftoppm` (poppler), un `.venv/` avec `pytest` et `ruff` (voir README.md, « Installation »).
 
 Variante « nouveau contenu » : remplacer `cahier.txt` (ou demander à Claude de l'écrire d'après `PEDAGOGIE.md`) avant de lancer le prompt. `tests/test_contenu.py` vérifiera alors les règles de `PEDAGOGIE.md` sur le nouveau contenu.
 

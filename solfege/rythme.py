@@ -10,34 +10,32 @@ from .cahier import Cahier, Chapter, Exercise, Lesson, SourceLine
 from .erreurs import CahierError
 from .largeurs import BOLD, ITALIC, LARGEUR_UTILE_MM, ROMAN, largeur_mm
 
-DIVISIONS = 12  # divisions MusicXML par noire
-BEAT = DIVISIONS
+BEAT = 12  # divisions par noire (1 temps)
 MAX_BEATS = 12  # au-delà, ce n'est plus une mesure lisible
 
 
 class Token(NamedTuple):
     duration: int | None  # en divisions ; None = mesure entière
-    kind: str  # type MusicXML
+    ly: str  # durée LilyPond (« 4 » noire, « 8. » croche pointée) ; pause « p » : selon le chiffrage
     is_rest: bool
-    dotted: bool
 
 
 TOKENS = {
-    "r": Token(48, "whole", False, False),
-    "b.": Token(36, "half", False, True),
-    "b": Token(24, "half", False, False),
-    "n.": Token(18, "quarter", False, True),
-    "n": Token(12, "quarter", False, False),
-    "c.": Token(9, "eighth", False, True),
-    "c": Token(6, "eighth", False, False),
-    "t": Token(4, "eighth", False, False),  # croche de triolet (3 dans 1 temps)
-    "d": Token(3, "16th", False, False),
-    "p": Token(None, "whole", True, False),  # durée = mesure entière
-    "dp": Token(24, "half", True, False),
-    "s": Token(12, "quarter", True, False),
-    "ds": Token(6, "eighth", True, False),
+    "r": Token(48, "1", False),
+    "b.": Token(36, "2.", False),
+    "b": Token(24, "2", False),
+    "n.": Token(18, "4.", False),
+    "n": Token(12, "4", False),
+    "c.": Token(9, "8.", False),
+    "c": Token(6, "8", False),
+    "t": Token(4, "8", False),  # croche de triolet (3 dans 1 temps)
+    "d": Token(3, "16", False),
+    "p": Token(None, "1", True),  # durée = mesure entière
+    "dp": Token(24, "2", True),
+    "s": Token(12, "4", True),
+    "ds": Token(6, "8", True),
 }
-BEAM_LEVELS = {"eighth": 1, "16th": 2}
+BEAMABLE = {"8", "8.", "16"}  # valeurs à crochet : ligaturables
 
 Measure = list[str]
 
@@ -198,7 +196,7 @@ def beam_groups(tokens: Measure) -> list[list[int]]:
     groups, current, pos = [], [], 0
     for i, t in enumerate(tokens):
         tok = TOKENS[t]
-        beamable = tok.kind in BEAM_LEVELS and not tok.is_rest
+        beamable = tok.ly in BEAMABLE and not tok.is_rest
         if beamable and current and pos % BEAT:
             current.append(i)
         else:
@@ -209,29 +207,3 @@ def beam_groups(tokens: Measure) -> list[list[int]]:
     if len(current) > 1:
         groups.append(current)
     return groups
-
-
-def compute_beams(tokens: Measure) -> list[dict[int, str]]:
-    """Pour chaque note de la mesure : {niveau: valeur} de ligatures MusicXML
-    (begin/continue/end/forward hook/backward hook)."""
-    beams: list[dict[int, str]] = [{} for _ in tokens]
-    for g in beam_groups(tokens):
-        for k, i in enumerate(g):
-            beams[i][1] = "begin" if k == 0 else "end" if k == len(g) - 1 else "continue"
-        # 2e barre : sur les suites de doubles-croches consécutives
-        k = 0
-        while k < len(g):
-            if TOKENS[tokens[g[k]]].kind != "16th":
-                k += 1
-                continue
-            run = [g[k]]
-            while k + 1 < len(g) and TOKENS[tokens[g[k + 1]]].kind == "16th":
-                k += 1
-                run.append(g[k])
-            if len(run) == 1:
-                beams[run[0]][2] = "backward hook" if run[0] == g[-1] else "forward hook"
-            else:
-                for j, i in enumerate(run):
-                    beams[i][2] = "begin" if j == 0 else "end" if j == len(run) - 1 else "continue"
-            k += 1
-    return beams

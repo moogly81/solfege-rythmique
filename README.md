@@ -12,7 +12,6 @@ Ce dépôt génère un cahier d'exercices (33 pages A4) pour apprendre à une en
 |---|---|---|
 | Python ≥ 3.11 | tout | `brew install uv` puis `uv venv && uv pip install -e ".[dev]"` |
 | LilyPond | générer le PDF | `brew install lilypond` ; ou `LILYPOND=/chemin/lilypond` |
-| qpdf | fusionner les pages | `brew install qpdf` ; ou `QPDF=/chemin/qpdf` |
 | poppler (`pdftoppm`) | contrôle visuel seulement | `brew install poppler` |
 
-Le code n'a aucune dépendance Python à l'exécution ; `pytest` et `ruff` servent au développement. La CI (GitHub Actions) installe LilyPond et qpdf : elle vérifie aussi le rendu PDF, pas seulement le code et `cahier.txt`.
+Le code n'a aucune dépendance Python à l'exécution ; `pytest` et `ruff` servent au développement. La CI (GitHub Actions) installe LilyPond : elle vérifie aussi le rendu PDF, pas seulement le code et `cahier.txt`.

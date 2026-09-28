@@ -8,7 +8,7 @@ version = "0.3.0"
 description = "Cahier de lecture rythmique pour enfant : cahier.txt -> LilyPond -> PDF"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []  # bibliothèque standard seulement ; outils externes : LilyPond, qpdf ; pdftoppm pour vérifier
+dependencies = []  # bibliothèque standard seulement ; outil externe : LilyPond ; pdftoppm pour vérifier
 
 [project.optional-dependencies]
 dev = [
@@ -25,7 +25,7 @@ packages = ["solfege"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
-markers = ["rendu: nécessite LilyPond et qpdf (ignoré s'ils sont absents)"]
+markers = ["rendu: nécessite LilyPond (ignoré s'il est absent)"]
 
 [tool.ruff]
 line-length = 120

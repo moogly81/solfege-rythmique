@@ -18,6 +18,14 @@
   tagline = ##f
 }
 
+\layout {
+  \context {
+    \Score
+    \remove "Bar_number_engraver"
+    \override TimeSignature.break-visibility = #end-of-line-invisible
+  }
+}
+
 rythme = {
   \autoBeamOff
   \numericTimeSignature
@@ -35,7 +43,10 @@ paroles = \lyricmode {
   "ron-de lon-gue" blan-che noir blan-che chut noi-re croch' chut ch croch \skip 8 \skip 8 \skip 16 \skip 16 \skip 16 \skip 16 \skip 8 \skip 8 \skip 8 \skip 8. \skip 16 \skip 1 \skip 2. \skip 4 \skip 4 \skip 4 \skip 8 \skip 4 \skip 8 \skip 4 \skip 8 \skip 16 \skip 16 \skip 16 \skip 16 \skip 8 \skip 8 \skip 8 \skip 8 \skip 2. \skip 8 \skip 8 \skip 16 \skip 16 \skip 16 \skip 16 \skip 4. \skip 8 \skip 8. \skip 16 \skip 8 \skip 16 \skip 16 \skip 2
 }
 
-\book {
+\bookpart {
+  \paper {
+    #(define (page-post-process layout pages) (ly:message "solfege-pages 1.1 ~a" (length pages)))
+  }
   \markup \fill-line {
     \center-column {
       \abs-fontsize #12 "Chapitre 1 · Référence & <essai>"
@@ -51,12 +62,44 @@ paroles = \lyricmode {
       >>
       \new Lyrics \lyricsto "cachee" \paroles
     >>
-    \layout {
-      \context {
-        \Score
-        \remove "Bar_number_engraver"
-        \override TimeSignature.break-visibility = #end-of-line-invisible
-      }
+  }
+}
+
+rythme = {
+  \autoBeamOff
+  \numericTimeSignature
+  \override Staff.StaffSymbol.line-count = #1
+  \override Stem.direction = #UP
+  \clef "percussion"
+  \time 4/4 \mark \markup { \box "1.2.1" } c'4 c'4 c'2 | c'1 \bar "|." |
+}
+
+cachee = {
+  c'4 c'4 c'2 c'1
+}
+
+paroles = \lyricmode {
+  \skip 4 \skip 4 \skip 2 \skip 1
+}
+
+\bookpart {
+  \paper {
+    #(define (page-post-process layout pages) (ly:message "solfege-pages 1.2 ~a" (length pages)))
+  }
+  \markup \fill-line {
+    \center-column {
+      \abs-fontsize #12 "Chapitre 1 · Référence & <essai>"
+      \abs-fontsize #22 \bold "1.2  Deuxième page"
+      \abs-fontsize #13 \italic "Une 2e leçon pour tester la numérotation des pages."
     }
+  }
+  \score {
+    <<
+      \new Staff <<
+        \new Voice = "rythme" \rythme
+        \new NullVoice = "cachee" \cachee
+      >>
+      \new Lyrics \lyricsto "cachee" \paroles
+    >>
   }
 }

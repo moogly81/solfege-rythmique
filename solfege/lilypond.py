@@ -1,10 +1,9 @@
-"""Étape 3 (LilyPond) : une leçon -> un document .ly (une page). Fonction pure."""
+"""Étape 3 (LilyPond) : le cahier -> un seul document .ly, une page (\\bookpart) par leçon. Fonctions pures."""
 
 from . import config
-from .cahier import Chapter, Lesson
+from .cahier import Cahier, Chapter, Lesson
 from .rythme import TOKENS, beam_groups, parse_exercise
 
-KIND_DUR = {"whole": "1", "half": "2", "quarter": "4", "eighth": "8", "16th": "16"}
 # Pause « p » (silence = toute la mesure) : durée LilyPond selon le nombre de temps.
 # Au-delà de 4 temps (hors usage réel, cf. NOTATION.md) : repli sur la ronde, non testé visuellement.
 FULL_REST = {1: "4", 2: "2", 3: "2.", 4: "1"}
@@ -18,8 +17,7 @@ def _plain_duration(token: str, beats: int) -> str:
     """Durée LilyPond du token (hors pause « p », qui dépend du chiffrage)."""
     if token == "p":
         return FULL_REST.get(beats, "1")
-    _, kind, _, dotted = TOKENS[token]
-    return KIND_DUR[kind] + ("." if dotted else "")
+    return TOKENS[token].ly
 
 
 PITCH = "c'"  # seule hauteur à tomber exactement au milieu de l'unique ligne (clé de percussion,
@@ -129,38 +127,18 @@ def _body(lesson: Lesson) -> tuple[str, str, str]:
     return " ".join(music_lines), " ".join(hidden_lines), " ".join(lyric_lines)
 
 
-def lesson_to_lilypond(chapter: Chapter, lesson: Lesson, page_stem: str | None = None) -> str:
-    """page_stem : nom de fichier de sortie forcé (sans extension), ex. « page_02 ». Sans lui,
-    LilyPond déduit le nom depuis le fichier d'entrée : correct seul à seul, mais LilyPond 2.24.3
-    (Ubuntu 24.04, CI) déduit mal le nom du 2e fichier et suivants quand plusieurs .ly sont
-    compilés en un seul appel (`lilypond --output DIR a.ly b.ly`) : b.pdf n'est jamais écrit."""
+PAGES_MARKER = "solfege-pages"  # ligne écrite dans le journal LilyPond : « solfege-pages 4.3 2 » = leçon 4.3, 2 pages
+
+
+def lesson_to_lilypond(chapter: Chapter, lesson: Lesson) -> str:
+    """Une leçon -> ses variables (« rythme », « cachee », « paroles ») et son \\bookpart (= une nouvelle page).
+    Les variables sont redéfinies avant chaque \\bookpart : LilyPond copie leur valeur à la lecture.
+    « page-post-process » écrit dans le journal le nombre de pages de la leçon (détection des débordements)."""
     music, hidden, lyrics = _body(lesson)
     chap = _escape(f"Chapitre {chapter.number} · {chapter.title}")
     title = _escape(f"{lesson.number}  {lesson.title}")
     instr = _escape(lesson.instruction)
-    output_name = f'\\bookOutputName "{page_stem}"\n  ' if page_stem else ""
-
-    staff_size_pt = config.STAFF_SIZE_MM * 72 / 25.4
-    return f"""\\version "2.24.0"
-#(set-global-staff-size {staff_size_pt:.2f})
-
-\\paper {{
-  #(set-paper-size "a4")
-  top-margin = {config.MARGIN_MM}\\mm
-  bottom-margin = {config.MARGIN_MM}\\mm
-  left-margin = {config.MARGIN_MM}\\mm
-  right-margin = {config.MARGIN_MM}\\mm
-  indent = 0
-  ragged-last-bottom = ##f
-  print-page-number = ##f
-  system-system-spacing.basic-distance = {config.SYSTEM_DISTANCE / 10}
-  markup-system-spacing.basic-distance = {config.TOP_SYSTEM_DISTANCE / 10}
-}}
-
-\\header {{
-  tagline = ##f
-}}
-
+    return f"""
 rythme = {{
   \\autoBeamOff
   \\numericTimeSignature
@@ -178,8 +156,11 @@ paroles = \\lyricmode {{
   {lyrics}
 }}
 
-\\book {{
-  {output_name}\\markup \\fill-line {{
+\\bookpart {{
+  \\paper {{
+    #(define (page-post-process layout pages) (ly:message "{PAGES_MARKER} {lesson.number} ~a" (length pages)))
+  }}
+  \\markup \\fill-line {{
     \\center-column {{
       \\abs-fontsize #{config.CHAPTER_PT} "{chap}"
       \\abs-fontsize #{config.TITLE_PT} \\bold "{title}"
@@ -194,13 +175,40 @@ paroles = \\lyricmode {{
       >>
       \\new Lyrics \\lyricsto "cachee" \\paroles
     >>
-    \\layout {{
-      \\context {{
-        \\Score
-        \\remove "Bar_number_engraver"
-        \\override TimeSignature.break-visibility = #end-of-line-invisible
-      }}
-    }}
   }}
 }}
 """
+
+
+def cahier_to_lilypond(cahier: Cahier) -> str:
+    """Tout le cahier -> un seul document .ly : réglages communs, puis une page (\\bookpart) par leçon."""
+    staff_size_pt = config.STAFF_SIZE_MM * 72 / 25.4
+    preamble = f"""\\version "2.24.0"
+#(set-global-staff-size {staff_size_pt:.2f})
+
+\\paper {{
+  #(set-paper-size "a4")
+  top-margin = {config.MARGIN_MM}\\mm
+  bottom-margin = {config.MARGIN_MM}\\mm
+  left-margin = {config.MARGIN_MM}\\mm
+  right-margin = {config.MARGIN_MM}\\mm
+  indent = 0
+  ragged-last-bottom = ##f
+  print-page-number = ##f
+  system-system-spacing.basic-distance = {config.SYSTEM_DISTANCE}
+  markup-system-spacing.basic-distance = {config.TOP_SYSTEM_DISTANCE}
+}}
+
+\\header {{
+  tagline = ##f
+}}
+
+\\layout {{
+  \\context {{
+    \\Score
+    \\remove "Bar_number_engraver"
+    \\override TimeSignature.break-visibility = #end-of-line-invisible
+  }}
+}}
+"""
+    return preamble + "".join(lesson_to_lilypond(chapter, lesson) for chapter, lesson in cahier.lessons())

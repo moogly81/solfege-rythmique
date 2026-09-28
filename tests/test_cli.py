@@ -1,3 +1,4 @@
+import re
 import subprocess
 from pathlib import Path
 
@@ -7,7 +8,7 @@ from solfege import config, rendu
 from solfege.cahier import load_cahier
 from solfege.cli import main
 from solfege.erreurs import RenduError
-from solfege.rendu import find_tool, merge_pdfs, overflow_warnings, render_pdfs
+from solfege.rendu import find_tool, overflow_warnings, render_pdf
 
 from .conftest import CAHIER_PATH
 
@@ -38,12 +39,12 @@ def test_erreur_ne_cree_aucun_fichier(tmp_path):
     assert not build.exists()
 
 
-def test_ly_ecrit_une_page_par_lecon(tmp_path):
-    (tmp_path / "page_99.ly").write_text("ancienne page")
+def test_ly_ecrit_un_seul_fichier(tmp_path):
+    (tmp_path / "page_99.ly").write_text("reste de l'ancien rendu page par page")
     assert main(["ly", "--cahier", str(CAHIER_PATH), "--build", str(tmp_path)]) == 0
-    pages = sorted(p.name for p in tmp_path.glob("page_*.ly"))
+    assert sorted(p.name for p in tmp_path.glob("*.ly")) == ["cahier.ly"]
     n_lessons = sum(1 for _ in load_cahier(CAHIER_PATH).lessons())
-    assert pages == [f"page_{i:02d}.ly" for i in range(1, n_lessons + 1)]
+    assert (tmp_path / "cahier.ly").read_text(encoding="utf-8").count("\\bookpart {") == n_lessons
 
 
 # --- find_tool ---------------------------------------------------------------
@@ -63,112 +64,96 @@ def test_variable_d_environnement_valide(monkeypatch, tmp_path):
 
 
 def test_variable_d_environnement_fausse_refusee(monkeypatch):
-    monkeypatch.setenv("QPDF", "/nulle/part/qpdf")
-    with pytest.raises(RenduError, match="qpdf introuvable : la variable QPDF pointe sur « /nulle/part/qpdf »"):
-        find_tool("QPDF", ["qpdf"])
+    monkeypatch.setenv("LILYPOND", "/nulle/part/lilypond")
+    message = "LilyPond introuvable : la variable LILYPOND pointe sur « /nulle/part/lilypond »"
+    with pytest.raises(RenduError, match=message):
+        find_tool("LILYPOND", ["lilypond"])
 
 
 # --- rendu sans LilyPond (subprocess simulé) ---------------------------------
 
 
 @pytest.fixture
-def fake_tools(monkeypatch, tmp_path):
-    """LilyPond et qpdf remplacés par des fichiers vides ; subprocess.run enregistré."""
+def fake_lilypond(monkeypatch, tmp_path):
+    """LilyPond remplacé par un fichier vide ; subprocess.run enregistré. Le faux LilyPond écrit le PDF
+    et, dans le journal, le nombre de pages de chaque leçon (« solfege-pages N.M K »)."""
     calls: list[list[str]] = []
-    for name in ("lilypond", "qpdf"):
-        (tmp_path / name).touch()
+    (tmp_path / "lilypond").touch()
     monkeypatch.setenv("LILYPOND", str(tmp_path / "lilypond"))
-    monkeypatch.setenv("QPDF", str(tmp_path / "qpdf"))
 
     class Fake:
         returncode = 0
-        stdout = "1\n"
-        stderr = ""
-        writes_pdfs = True
+        writes_pdf = True
+        log = "solfege-pages 1.1 1\nsolfege-pages 1.2 2\n"
 
     def run(cmd, **kwargs):
         calls.append(cmd)
-        if cmd[0].endswith("lilypond") and Fake.writes_pdfs:
-            out_idx = cmd.index("--output") + 1
-            build = Path(cmd[out_idx])
-            for ly in cmd[out_idx + 1 :]:
-                (build / Path(ly).with_suffix(".pdf").name).write_bytes(b"%PDF-fake")
-        return subprocess.CompletedProcess(cmd, Fake.returncode, Fake.stdout, Fake.stderr)
+        if Fake.writes_pdf:
+            (Path(cmd[2]) / Path(cmd[3]).with_suffix(".pdf").name).write_bytes(b"%PDF-fake")
+        kwargs["stdout"].write(Fake.log)
+        return subprocess.CompletedProcess(cmd, Fake.returncode)
 
     monkeypatch.setattr(rendu.subprocess, "run", run)
     Fake.calls = calls
     return Fake
 
 
-def test_render_pdfs_un_seul_appel_et_nettoyage(fake_tools, tmp_path):
+def test_render_pdf_un_seul_appel_et_nettoyage(fake_lilypond, tmp_path):
     build = tmp_path / "b"
     build.mkdir()
     (build / "page_09.pdf").write_bytes(b"perime")
-    lys = [build / "page_01.ly", build / "page_02.ly"]
-    for ly in lys:
-        ly.write_text("% vide")
-    pdfs = render_pdfs(lys, build)
-    assert pdfs == [build / "page_01.pdf", build / "page_02.pdf"]
-    assert all(p.exists() for p in pdfs)
+    ly = build / "cahier.ly"
+    ly.write_text("% vide")
+    pdf, pages = render_pdf(ly, build)
+    assert pdf == build / "cahier.pdf"
+    assert pdf.read_bytes() == b"%PDF-fake"
+    assert pages == {"1.1": 1, "1.2": 2}
     assert not (build / "page_09.pdf").exists()
-    (cmd,) = fake_tools.calls
+    (cmd,) = fake_lilypond.calls
     assert cmd[1] == "--output"
     assert Path(cmd[2]).is_absolute()
-    assert cmd[3:] == [str(lys[0].resolve()), str(lys[1].resolve())]
+    assert cmd[3:] == [str(ly.resolve())]
 
 
-def test_render_pdfs_code_retour_non_nul_echoue(fake_tools, tmp_path):
-    fake_tools.returncode = 1
-    ly = tmp_path / "page_01.ly"
+def test_render_pdf_supprime_l_ancien_pdf(fake_lilypond, tmp_path):
+    fake_lilypond.writes_pdf = False
+    (tmp_path / "cahier.pdf").write_bytes(b"perime")
+    ly = tmp_path / "cahier.ly"
+    ly.write_text("% vide")
+    with pytest.raises(RenduError, match=r"LilyPond n'a pas produit : .*cahier\.pdf \(voir .*lilypond\.log\)"):
+        render_pdf(ly, tmp_path)
+    assert not (tmp_path / "cahier.pdf").exists()
+
+
+def test_render_pdf_code_retour_non_nul_echoue(fake_lilypond, tmp_path):
+    fake_lilypond.returncode = 1
+    ly = tmp_path / "cahier.ly"
     ly.write_text("% vide")
     with pytest.raises(RenduError, match=r"LilyPond a échoué \(code 1\) : voir .*lilypond\.log"):
-        render_pdfs([ly], tmp_path)
+        render_pdf(ly, tmp_path)
 
 
-def test_render_pdfs_pdf_manquant(fake_tools, tmp_path):
-    fake_tools.writes_pdfs = False
-    ly = tmp_path / "page_01.ly"
-    ly.write_text("% vide")
-    with pytest.raises(RenduError, match=r"LilyPond n'a pas produit : .*page_01\.pdf \(voir .*lilypond\.log\)"):
-        render_pdfs([ly], tmp_path)
-
-
-def test_merge_pdfs_echec_sans_trace(fake_tools, tmp_path):
-    fake_tools.returncode = 2
-    fake_tools.stderr = "qpdf: fichier illisible"
-    with pytest.raises(RenduError, match=r"qpdf n'a pas pu fusionner les pages \(code 2\) : qpdf: fichier illisible"):
-        merge_pdfs([tmp_path / "a.pdf"], tmp_path / "out.pdf")
-
-
-def test_merge_pdfs_commande(fake_tools, tmp_path):
-    merge_pdfs([tmp_path / "a.pdf", tmp_path / "b.pdf"], tmp_path / "out.pdf")
-    (cmd,) = fake_tools.calls
-    assert cmd[1:] == [
-        "--empty",
-        "--pages",
-        str(tmp_path / "a.pdf"),
-        str(tmp_path / "b.pdf"),
-        "--",
-        str(tmp_path / "out.pdf"),
-    ]
-
-
-def test_debordement_signale(fake_tools, tmp_path):
-    fake_tools.stdout = "2\n"
-    assert overflow_warnings([tmp_path / "page_03.pdf"], ["1.3"]) == [
+def test_debordement_signale():
+    assert overflow_warnings({"1.1": 1, "1.3": 2}, ["1.1", "1.3"]) == [
         "Attention : la leçon 1.3 déborde (2 pages au lieu de 1) : raccourcir des lignes."
     ]
-    fake_tools.stdout = "1\n"
-    assert overflow_warnings([tmp_path / "page_03.pdf"], ["1.3"]) == []
+    assert overflow_warnings({"1.1": 1, "1.3": 1}, ["1.1", "1.3"]) == []
 
 
-def test_outil_qui_ne_se_lance_pas(fake_tools, monkeypatch, tmp_path):
+def test_nombre_de_pages_inconnu():
+    with pytest.raises(RenduError, match=r"LilyPond n'a pas indiqué le nombre de pages de la leçon 1\.3"):
+        overflow_warnings({"1.1": 1}, ["1.1", "1.3"])
+
+
+def test_outil_qui_ne_se_lance_pas(fake_lilypond, monkeypatch, tmp_path):
     def run(cmd, **kwargs):
         raise PermissionError(13, "Permission denied")
 
     monkeypatch.setattr(rendu.subprocess, "run", run)
-    with pytest.raises(RenduError, match=r"Impossible de lancer « .*qpdf » : Permission denied"):
-        merge_pdfs([tmp_path / "a.pdf"], tmp_path / "out.pdf")
+    ly = tmp_path / "cahier.ly"
+    ly.write_text("% vide")
+    with pytest.raises(RenduError, match=r"Impossible de lancer « .*lilypond » : Permission denied"):
+        render_pdf(ly, tmp_path)
 
 
 # --- rendu réel --------------------------------------------------------------
@@ -182,12 +167,17 @@ def _available(env, candidates):
         return False
 
 
+def _pdf_pages(pdf: Path) -> int:
+    """Nombre de pages d'un PDF 1.4 (celui de LilyPond : pas de flux d'objets compressés)."""
+    return max(int(n) for n in re.findall(rb"/Count (\d+)", pdf.read_bytes()))
+
+
+needs_lilypond = pytest.mark.skipif(not _available("LILYPOND", config.LILYPOND_CANDIDATES), reason="LilyPond absent")
+
+
 @pytest.mark.rendu
-@pytest.mark.skipif(
-    not (_available("LILYPOND", config.LILYPOND_CANDIDATES) and _available("QPDF", config.QPDF_CANDIDATES)),
-    reason="LilyPond ou qpdf absent",
-)
-def test_pdf_complet(tmp_path):
+@needs_lilypond
+def test_pdf_complet(tmp_path, capsys):
     cahier = tmp_path / "cahier.txt"
     cahier.write_text(
         "# C\n## L\nConsigne : test\n- r | b b | n n c c n | t t t d d c c. d n\n"
@@ -199,5 +189,20 @@ def test_pdf_complet(tmp_path):
     build = tmp_path / "b"
     assert main(["pdf", "--cahier", str(cahier), "--build", str(build), "--output", str(out)]) == 0
     assert out.read_bytes().startswith(b"%PDF")
-    assert rendu.page_count(out) == 2
-    assert [rendu.page_count(p) for p in sorted(build.glob("page_*.pdf"))] == [1, 1]
+    assert _pdf_pages(out) == 2
+    assert f"PDF généré : {out} (2 pages)" in capsys.readouterr().out
+
+
+@pytest.mark.rendu
+@needs_lilypond
+def test_pdf_debordement_reel(tmp_path, capsys):
+    """Une leçon trop longue : LilyPond la met sur 2 pages, le programme le dit (code 2)."""
+    cahier = tmp_path / "cahier.txt"
+    trop_long = "".join("- n n n n | b b | r | c c c c b\n  n n b | r | b b | n n n n\n" for _ in range(12))
+    cahier.write_text(f"# C\n## Courte\n- r | b b\n## Longue\n{trop_long}", encoding="utf-8")
+    out = tmp_path / "out.pdf"
+    assert main(["pdf", "--cahier", str(cahier), "--build", str(tmp_path / "b"), "--output", str(out)]) == 2
+    err = capsys.readouterr().err
+    assert "la leçon 1.2 déborde" in err
+    assert "1.1" not in err
+    assert _pdf_pages(out) > 2

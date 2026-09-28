@@ -2,7 +2,7 @@ import pytest
 
 from solfege.cahier import parse_cahier
 from solfege.erreurs import CahierError
-from solfege.rythme import BEAT, check, compute_beams, parse_line, parse_syllables, parse_time
+from solfege.rythme import BEAT, beam_groups, check, parse_line, parse_syllables, parse_time
 
 
 @pytest.mark.parametrize(("sig", "beats"), [("2/4", 2), ("3/4", 3), ("4/4", 4)])
@@ -94,47 +94,42 @@ def test_check_ok():
     assert check(parse_cahier("# C\n## L\n- r | b b\n  n n n n\n")) == []
 
 
-def beams(tokens):
-    return [dict(b) for b in compute_beams(tokens.split())]
+def groups(tokens):
+    return beam_groups(tokens.split())
 
 
 def test_ligatures_par_temps():
-    assert beams("c c c c n n") == [{1: "begin"}, {1: "end"}, {1: "begin"}, {1: "end"}, {}, {}]
+    assert groups("c c c c n n") == [[0, 1], [2, 3]]
 
 
 def test_ligatures_doubles():
-    assert beams("d d d d") == [
-        {1: "begin", 2: "begin"},
-        {1: "continue", 2: "continue"},
-        {1: "continue", 2: "continue"},
-        {1: "end", 2: "end"},
-    ]
-    assert beams("c d d") == [{1: "begin"}, {1: "continue", 2: "begin"}, {1: "end", 2: "end"}]
-    assert beams("d d c") == [{1: "begin", 2: "begin"}, {1: "continue", 2: "end"}, {1: "end"}]
+    assert groups("d d d d") == [[0, 1, 2, 3]]
+    assert groups("c d d") == [[0, 1, 2]]
+    assert groups("d d c") == [[0, 1, 2]]
 
 
 def test_ligatures_croche_pointee_double():
-    assert beams("c. d") == [{1: "begin"}, {1: "end", 2: "backward hook"}]
-    assert beams("d c.") == [{1: "begin", 2: "forward hook"}, {1: "end"}]
+    assert groups("c. d") == [[0, 1]]
+    assert groups("d c.") == [[0, 1]]
 
 
 def test_ligatures_triolet():
-    assert beams("t t t") == [{1: "begin"}, {1: "continue"}, {1: "end"}]
+    assert groups("t t t") == [[0, 1, 2]]
 
 
 def test_silence_coupe_la_ligature():
-    assert beams("ds c c c") == [{}, {}, {1: "begin"}, {1: "end"}]
+    assert groups("ds c c c") == [[2, 3]]
     assert BEAT == 12
 
 
 def test_valeur_qui_chevauche_deux_temps_reste_dans_son_groupe():
     # c. commence dans le 1er temps et finit dans le 2e : la double qui suit reste ligaturée
-    assert beams("c c. d n n") == [{1: "begin"}, {1: "continue"}, {1: "end", 2: "backward hook"}, {}, {}]
+    assert groups("c c. d n n") == [[0, 1, 2]]
 
 
 @pytest.mark.parametrize("tokens", ["c n c", "n. c", "n c n", "c s c"])
 def test_pas_de_ligature_entre_croches_isolees(tokens):
-    assert beams(tokens) == [{} for _ in tokens.split()]
+    assert groups(tokens) == []
 
 
 def test_syllabes_une_par_note():
