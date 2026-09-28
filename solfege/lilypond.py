@@ -173,7 +173,9 @@ paroles = \\lyricmode {{
         \\new Voice = "rythme" \\rythme
         \\new NullVoice = "cachee" \\cachee
       >>
-      \\new Lyrics \\lyricsto "cachee" \\paroles
+      \\new Lyrics \\with {{
+        \\override LyricText.self-alignment-X = #LEFT
+      }} \\lyricsto "cachee" \\paroles
     >>
   }}
 }}

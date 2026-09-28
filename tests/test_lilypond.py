@@ -187,3 +187,13 @@ def test_piste_invisible_pour_les_paroles():
     hidden = hidden_block(ly)
     assert re.fullmatch(r"(c'\d+\.? ?\|? ?)+", hidden), hidden
     assert "r" not in re.sub(r"c'\d+\.?", "", hidden)  # aucun silence dans la piste cachée
+
+
+def test_syllabe_alignee_a_gauche_de_sa_note():
+    """Bug réel (rendu visuel, pixel) : par défaut LilyPond centre une syllabe longue (ex.
+    « ron-de lon-gue » sous une seule ronde) sur la colonne de la note, si bien que le début du
+    mot se retrouve après la note plutôt que dessous. Fixé en forçant l'alignement à gauche du
+    contexte Lyrics : `\\new Lyrics \\with { ... self-alignment-X = #LEFT }`."""
+    ly = ly_of("# C\n## L\n- r\n  = ron-de_lon-gue\n")
+    assert "\\new Lyrics \\with {\n" in ly
+    assert "\\override LyricText.self-alignment-X = #LEFT" in ly

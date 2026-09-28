@@ -143,11 +143,11 @@ Mesure : 3/4
   b n | n n s | s b | n n n
 
 ## La blanche pointée
-Consigne : La blanche pointée dure 3 temps, toute la mesure : dis « blan-che lon-gue ».
+Consigne : La blanche pointée dure 3 temps, toute la mesure : dis « blan-che-point ».
 Mesure : 3/4
 
 - b. | n n n | b.
-  = blan-che_lon-gue | noir noir noir | blan-che_lon-gue
+  = blan-che-point | noir noir noir | blan-che-point
 - b. | b n | b. | p
 - b n | b. | n b | b.
   n n n | b. | b n | p
