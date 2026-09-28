@@ -14,4 +14,4 @@ Ce dépôt génère un cahier d'exercices (36 pages A4) pour apprendre à une en
 | LilyPond | générer le PDF | `brew install lilypond` ; ou `LILYPOND=/chemin/lilypond` |
 | poppler (`pdftoppm`) | contrôle visuel seulement | `brew install poppler` |
 
-Le code n'a aucune dépendance Python à l'exécution ; `pytest` et `ruff` servent au développement. La CI (GitHub Actions) installe LilyPond : elle vérifie aussi le rendu PDF, pas seulement le code et `cahier.txt`.
+Le code n'a aucune dépendance Python à l'exécution ; `pytest` et `ruff` servent au développement. La CI (GitHub Actions) installe LilyPond : elle vérifie aussi le rendu PDF, pas seulement le code et `cahier.txt`, et publie le PDF de chaque exécution en artefact `cahier_rythme` (onglet Actions).
